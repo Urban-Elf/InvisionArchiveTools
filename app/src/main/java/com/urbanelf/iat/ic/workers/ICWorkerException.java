@@ -1,4 +1,4 @@
-package com.urbanelf.ima.ic.workers;
+package com.urbanelf.iat.ic.workers;
 
 public class ICWorkerException extends RuntimeException {
     public ICWorkerException() {;

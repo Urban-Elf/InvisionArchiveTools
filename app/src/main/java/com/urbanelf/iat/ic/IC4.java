@@ -1,4 +1,4 @@
-package com.urbanelf.ima.ic;
+package com.urbanelf.iat.ic;
 
 public final class IC4 extends IC {
     private final transient String auth;

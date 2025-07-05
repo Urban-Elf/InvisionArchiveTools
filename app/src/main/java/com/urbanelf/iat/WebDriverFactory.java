@@ -1,4 +1,4 @@
-package com.urbanelf.ima;
+package com.urbanelf.iat;
 
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;

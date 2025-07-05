@@ -1,7 +1,7 @@
-package com.urbanelf.ima.ic.workers.ic4;
+package com.urbanelf.iat.ic.workers.ic4;
 
-import com.urbanelf.ima.ic.IC;
-import com.urbanelf.ima.ic.workers.ICWorker;
+import com.urbanelf.iat.ic.IC;
+import com.urbanelf.iat.ic.workers.ICWorker;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;

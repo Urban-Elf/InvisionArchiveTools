@@ -1,4 +1,4 @@
-package com.urbanelf.ima.util;
+package com.urbanelf.iat.util;
 
 import java.io.IOException;
 import java.nio.file.Files;

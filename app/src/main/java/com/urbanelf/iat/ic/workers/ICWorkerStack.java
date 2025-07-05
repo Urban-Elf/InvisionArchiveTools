@@ -1,7 +1,7 @@
-package com.urbanelf.ima.ic.workers;
+package com.urbanelf.iat.ic.workers;
 
-import com.urbanelf.ima.ic.IC;
-import com.urbanelf.ima.ic.workers.state.ICWorkerState;
+import com.urbanelf.iat.ic.IC;
+import com.urbanelf.iat.ic.workers.state.ICWorkerState;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;

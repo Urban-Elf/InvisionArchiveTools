@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.urbanelf.ima.util;
+package com.urbanelf.iat.util;
 
 /**
  * Not thread-safe.

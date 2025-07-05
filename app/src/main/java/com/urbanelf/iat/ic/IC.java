@@ -1,4 +1,4 @@
-package com.urbanelf.ima.ic;
+package com.urbanelf.iat.ic;
 
 public abstract class IC {
     private final String rootUrl;

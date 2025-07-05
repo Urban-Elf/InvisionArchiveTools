@@ -1,4 +1,4 @@
-package com.urbanelf.ima.ui;
+package com.urbanelf.iat.ui;
 
 import java.awt.Color;
 
