@@ -1,4 +1,4 @@
-package com.urbanelf.ima.ic.workers.state;
+package com.urbanelf.iat.ic.workers.state;
 
 // Marker interface
 public interface ICWorkerState {

@@ -1,8 +1,8 @@
-package com.urbanelf.ima.ui;
+package com.urbanelf.iat.ui;
 
-import com.urbanelf.ima.ic.workers.ICWorker;
-import com.urbanelf.ima.ic.workers.state.ICWorkerState;
-import com.urbanelf.ima.ic.workers.state.ICWorkerStateObserver;
+import com.urbanelf.iat.ic.workers.ICWorker;
+import com.urbanelf.iat.ic.workers.state.ICWorkerState;
+import com.urbanelf.iat.ic.workers.state.ICWorkerStateObserver;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;

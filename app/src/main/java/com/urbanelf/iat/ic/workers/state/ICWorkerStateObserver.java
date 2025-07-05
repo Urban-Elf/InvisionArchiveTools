@@ -1,4 +1,4 @@
-package com.urbanelf.ima.ic.workers.state;
+package com.urbanelf.iat.ic.workers.state;
 
 public interface ICWorkerStateObserver {
     void stateChanged(ICWorkerState state);

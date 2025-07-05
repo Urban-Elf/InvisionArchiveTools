@@ -1,4 +1,4 @@
-package com.urbanelf.ima.util;
+package com.urbanelf.iat.util;
 
 import org.json.JSONObject;
 

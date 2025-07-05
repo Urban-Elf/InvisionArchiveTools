@@ -1,9 +1,9 @@
-package com.urbanelf.ima.ic.workers;
+package com.urbanelf.iat.ic.workers;
 
-import com.urbanelf.ima.WebDriverFactory;
-import com.urbanelf.ima.ic.IC;
-import com.urbanelf.ima.ic.workers.state.ICWorkerState;
-import com.urbanelf.ima.ic.workers.state.ICWorkerStateObserver;
+import com.urbanelf.iat.WebDriverFactory;
+import com.urbanelf.iat.ic.IC;
+import com.urbanelf.iat.ic.workers.state.ICWorkerState;
+import com.urbanelf.iat.ic.workers.state.ICWorkerStateObserver;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;

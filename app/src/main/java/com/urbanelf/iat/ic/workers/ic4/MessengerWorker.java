@@ -1,7 +1,7 @@
-package com.urbanelf.ima.ic.workers.ic4;
+package com.urbanelf.iat.ic.workers.ic4;
 
-import com.urbanelf.ima.content.Post;
-import com.urbanelf.ima.ic.workers.state.ICWorkerState;
+import com.urbanelf.iat.content.Post;
+import com.urbanelf.iat.ic.workers.state.ICWorkerState;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;

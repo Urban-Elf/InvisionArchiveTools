@@ -1,4 +1,4 @@
-package com.urbanelf.ima.content;
+package com.urbanelf.iat.content;
 
 public class Post {
     private final String author;

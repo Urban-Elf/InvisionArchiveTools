@@ -1,13 +1,13 @@
-package com.urbanelf.ima.ui;
+package com.urbanelf.iat.ui;
 
-import com.urbanelf.ima.ic.IC;
-import com.urbanelf.ima.ic.IC4;
-import com.urbanelf.ima.ic.IC5;
-import com.urbanelf.ima.ic.workers.ICWorker;
-import com.urbanelf.ima.ic.workers.ICWorkerStack;
-import com.urbanelf.ima.ic.workers.ic4.MessengerWorker;
-import com.urbanelf.ima.util.LocalStorage;
-import com.urbanelf.ima.util.URLUtils;
+import com.urbanelf.iat.ic.IC;
+import com.urbanelf.iat.ic.IC4;
+import com.urbanelf.iat.ic.IC5;
+import com.urbanelf.iat.ic.workers.ICWorker;
+import com.urbanelf.iat.ic.workers.ICWorkerStack;
+import com.urbanelf.iat.ic.workers.ic4.MessengerWorker;
+import com.urbanelf.iat.util.LocalStorage;
+import com.urbanelf.iat.util.URLUtils;
 
 import org.json.JSONObject;
 
