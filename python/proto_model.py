@@ -49,7 +49,7 @@ class ClientPacket:
             self.data = data
 
 # Server is this python module
-class ServerPacket:
+class ServerPacket(Serializable):
     def __init__(self, worker_id: str, shared_action: ServerSA):
         # Process identifier
         self.worker_id = worker_id
@@ -63,7 +63,7 @@ class ServerPacket:
         self.data[id] = data
         return self
     
-    def to_dict(self):
+    def __serialize__(self):
         return {
             "worker_id": self.worker_id,
             "shared_action": self.shared_action,
@@ -71,7 +71,7 @@ class ServerPacket:
         }
 
     def __str__(self):
-        return json.dumps(self.to_dict(), cls=CustomEncoder)
+        return json.dumps(self, cls=CustomEncoder)
 
     def __repr__(self):
         return self.__str__()
