@@ -78,11 +78,13 @@ def process_client_cmd():
                 _worker = get_worker_by_uuid(packet.worker_id)
                 if (_worker == None):
                     continue
+                _worker.shutdown()
+                _worker.join()
+                util.write_packet(proto_model.ServerPacket(packet.worker_id, proto_model.ServerSA.TERMINATED))
             elif packet.shared_action == proto_model.ClientSA.TERMINATE:
                 break
         except BaseException:
-            error_string = traceback.format_exc()
-            util.log(util.LogLevel.WARNING, "Failed to deconstruct client packet: " + error_string)
+            util.log(util.LogLevel.WARNING, "Failed to deconstruct client packet: ", error_trace=True)
 
 def get_worker_by_uuid(uuid: str):
     if ACTIVE_WORKERS.__contains__(uuid):
@@ -98,9 +100,6 @@ def main():
         worker: ic_worker.ICWorker = ACTIVE_WORKERS[worker_id]
         worker.shutdown()
         worker.join()
-
-    #driver = util.create_chromedriver()
-    #driver.get("https://github.com")
 
 if __name__ == "__main__":
     main()

@@ -18,6 +18,7 @@
 import sys
 import threading
 import time
+import psutil
 import proto_model
 import util
 from worker.ic import *
@@ -39,6 +40,9 @@ class ICWorker(threading.Thread):
         self.result_consumer = result_consumer
         self.shutdown_event = threading.Event()
 
+    def execute(self):
+        raise NotImplementedError()
+
     def authenticate(self):
         raise NotImplementedError()
     
@@ -46,26 +50,31 @@ class ICWorker(threading.Thread):
         WebDriverWait(self.driver, time).until(condition)
 
     def run(self):
-        self.set_state(SharedState.INITIALIZATION)
-        # Create chromedriver
-        util.log(util.LogLevel.INFO, "Starting chromedriver...")
-        self.driver = util.create_chromedriver()
+        try:
+            self.set_state(SharedState.INITIALIZATION)
+            # Create chromedriver
+            util.log(util.LogLevel.INFO, "Starting chromedriver...")
+            self.driver = util.create_chromedriver()
 
-        # Authenticate
-        while True:
-            self.driver.get(self.ic.auth())
-            self.set_state(SharedState.AUTH_REQUIRED)
+            # Authenticate
+            while True:
+                self.driver.get(self.ic.auth())
+                self.set_state(SharedState.AUTH_REQUIRED)
 
-            # Validate session
-            self.set_state(SharedState.VALIDATING_SESSION)
-            try:
-                self.driver_await(EC.presence_of_element_located((By.CLASS_NAME, "elMobileDrawer__user-panel")), time=5)
-            except TimeoutException:
-                self.set_state(SharedState.SESSION_INVALID)
-                continue
-            # Valid session
-            break
-        util.log(util.LogLevel.INFO, "Valid session, proceeding...")
+                # Validate session
+                self.set_state(SharedState.VALIDATING_SESSION)
+                try:
+                    self.driver_await(EC.presence_of_element_located((By.CLASS_NAME, "elMobileDrawer__user-panel")), time=5)
+                except TimeoutException:
+                    self.set_state(SharedState.SESSION_INVALID)
+                    continue
+                # Valid session
+                break
+            util.log(util.LogLevel.INFO, "Valid session, proceeding...")
+
+            self.execute()
+        except BaseException:
+            util.log(util.LogLevel.FATAL, "An internal error occurred: ", error_trace=True)
 
     def set_state(self, state: ICWorkerState):
         self.state = state
@@ -80,6 +89,11 @@ class ICWorker(threading.Thread):
     def shutdown(self):
         self.shutdown_event.set()
         self.driver.quit()
+        pid = self.driver.service.process.pid
+        proc = psutil.Process(pid)
+        for child in proc.children(recursive=True):
+            child.kill()
+        proc.kill()
 
     def set_client_object(self, client_object):
         self.client_object = client_object
