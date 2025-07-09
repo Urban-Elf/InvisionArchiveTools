@@ -19,10 +19,10 @@ import shared_constants
 import serializable
 
 class ButtonConfig(serializable.Serializable):
-    def __init__(self, text: str, shared_action: shared_constants.ButtonCallbackSA=shared_constants.ButtonCallbackSA.NONE, client_object=None):
+    def __init__(self, text: str, shared_action: shared_constants.ButtonCallbackSA=shared_constants.ButtonCallbackSA.NONE, client_object=True):
         self.text = text
         self.shared_action = shared_action
-        self.client_object = client_object
+        self.client_object = client_object # Default must be anything besides "None"
 
     def __serialize__(self):
         return {
@@ -54,12 +54,12 @@ class SharedState:
     INITIALIZATION = ICWorkerState(note="Initializing... Please wait...")
     AUTH_REQUIRED = ICWorkerState(note="Please sign in to continue.",
                                   hint="Sign in on the browser before pressing 'Proceed'",
-                                  button_configs=[ButtonConfig("Proceed", client_object=True)])
-    VALIDATING_SESSION = ICWorkerState(note="Validating session... Please wait...")
+                                  button_configs=[ButtonConfig("Proceed")])
+    VALIDATING_SESSION = ICWorkerState(note="Validating session...")
     SESSION_INVALID = ICWorkerState(note="Session invalid. Please try again.",
-                                      button_configs=[ButtonConfig("OK", client_object=True)])
+                                      button_configs=[ButtonConfig("OK")])
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
                                        hint="Please notify the developer (Help → Report Bug)",
                                        button_configs=[
-                                           ButtonConfig("OK"),
-                                           ButtonConfig("Close")])
+                                           ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG),
+                                           ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)])

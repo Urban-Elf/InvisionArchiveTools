@@ -15,33 +15,6 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
-from enum import Enum, auto
-
-class ClientSA(Enum):
-    # data[version, root_url, worker_type]
-    DISPATCH_WORKER = auto()
-    # worker_id, data[client_object]
-    STATE_INPUT = auto()
-    # worker_id
-    TERMINATE_WORKER = auto()
-    TERMINATE = auto()
-
-class ServerSA(Enum):
-    UUID_AVAILABLE = auto()
-    STATE_CHANGED = auto()
-    PROGRESS_UPDATE = auto()
-    RESULT_AVAILABLE = auto()
-    EXCEPTION_THROWN = auto()
-    TERMINATED = auto()
-
-class Workers(Enum):
-    MESSENGER_WORKER = auto()
-    TOPIC_WORKER = auto()
-    FORUM_WORKER = auto()
-    BLOG_WORKER = auto()
-
-class ButtonCallbackSA(Enum):
-    NONE = auto()
-    OPEN_LOG = auto()
-    EXPORT_ARCHIVE = auto()
-    TERMINATE = auto()
+class ICWorkerException(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)

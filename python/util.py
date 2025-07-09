@@ -17,12 +17,13 @@
 
 import sys
 import threading
+import traceback
 from enum import Enum, auto
 import proto_model
 import undetected_chromedriver
 import screeninfo
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+#from selenium.webdriver.chrome.options import Options
+#from webdriver_manager.chrome import ChromeDriverManager
 
 def validate_json_data(json_data: str):
     if not isinstance(json_data, str):
@@ -54,6 +55,9 @@ class LogLevel(Enum):
     ERROR = auto()
     FATAL = auto()
 
-def log(level: LogLevel, message: str):
-    sys.stderr.write("[" + threading.current_thread().getName() + "] " + level.name + " - " + message + "\n")
+def log(level: LogLevel, message: str, error_trace: bool=False):
+    error_string = ""
+    if error_trace:
+        error_string = traceback.format_exc()
+    sys.stderr.write("[" + threading.current_thread().getName() + "] " + level.name + " - " + message + error_string + "\n")
     sys.stderr.flush()
