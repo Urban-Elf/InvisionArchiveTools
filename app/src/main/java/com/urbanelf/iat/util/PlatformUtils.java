@@ -20,12 +20,12 @@
 package com.urbanelf.iat.util;
 
 public class PlatformUtils {
-    private static Platform PLATFORM;
+    private static final Platform PLATFORM;
 
     private PlatformUtils() {
     }
 
-    public static void initialize() {
+    static {
         final String osName = System.getProperty("os.name").toLowerCase();
         if (osName.contains("linux")) {
             PLATFORM = Platform.Linux;
@@ -36,6 +36,9 @@ public class PlatformUtils {
         } else {
             PLATFORM = Platform.Unknown;
         }
+    }
+
+    public static void initialize() {
     }
 
     public static Platform getRunningPlatform() {

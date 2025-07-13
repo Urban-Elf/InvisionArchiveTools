@@ -1,5 +1,0 @@
-{"shared_action":"DISPATCH_WORKER","data":{"version":4,"root_url":"https://catholicharbor.com","worker_type":"MESSENGER_WORKER"}}
-
-{"shared_action":"STATE_INPUT","worker_id":"83c6586f-cdf4-4bf2-a2e9-3f5d94ab748e","data":{"client_object":true}}
-
-{"shared_action":"TERMINATE"}

@@ -19,12 +19,14 @@
 
 package com.urbanelf.iat.ui;
 
+import com.urbanelf.iat.Core;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.IC4;
 import com.urbanelf.iat.ic.IC5;
-import com.urbanelf.iat.ic.workers.ICWorker;
-import com.urbanelf.iat.ic.workers.ICWorkerStack;
-import com.urbanelf.iat.ic.workers.ic4.MessengerWorker;
+import com.urbanelf.iat.proto.ClientPacket;
+import com.urbanelf.iat.proto.PythonServer;
+import com.urbanelf.iat.proto.constants.ClientSA;
+import com.urbanelf.iat.proto.constants.WorkerType;
 import com.urbanelf.iat.util.LocalStorage;
 import com.urbanelf.iat.util.URLUtils;
 
@@ -35,12 +37,12 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -64,22 +66,29 @@ import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 
 public class MainFrame extends JFrame {
-    private static final String LS_COMMUNITY_URLS = "community_urls";
+    private static final String TAG = MainFrame.class.getSimpleName();
 
-    private final ICWorkerStack<ICWorker<?>> workerStack;
+    private static final String LS_COMMUNITY_URLS = "community_urls";
 
     private final DefaultListModel<IC> communityListModel;
     private final DefaultComboBoxModel<IC> currentCommunityModel;
     private final JComboBox<IC> currentCommunity;
 
+    private IC currentIc;
+
     public MainFrame() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Invision Archive Tools");
 
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                PythonServer.writePacket(new ClientPacket(ClientSA.TERMINATE));
+            }
+        });
+
         setSize(new Dimension(854, 480));
         setLocationByPlatform(true);
-
-        workerStack = new ICWorkerStack<>(1); // TODO: increase concurrent count?
 
         communityListModel = new DefaultListModel<>();
         currentCommunityModel = new DefaultComboBoxModel<>();
@@ -87,7 +96,7 @@ public class MainFrame extends JFrame {
         currentCommunity.addActionListener(actionEvent -> {
             final IC ic = (IC) currentCommunity.getSelectedItem();
             if (ic != null)
-                workerStack.setIC(ic);
+                currentIc = ic;
         });
 
         final JPanel panel = new JPanel(new BorderLayout(8, 8));
@@ -113,13 +122,11 @@ public class MainFrame extends JFrame {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    // FIXME: log warning
+                    Core.error(TAG, "Error while attempting to restore persistent data", e);
                 }
             });
         } catch (Exception e) {
-            e.printStackTrace();
-            // FIXME: log warning
+            Core.error(TAG, "Error while attempting to restore persistent data", e);
         }
 
         communityListModel.addListDataListener(new ListDataListener() {
@@ -185,7 +192,7 @@ public class MainFrame extends JFrame {
         final JPanel buttonsPanel = new JPanel(new GridBagLayout());
 
         final JButton messengerButton = new JButton("<html><b>Messenger</b><br>Private conversation among community members.</html>");
-        final ImageIcon messengerIcon = new ImageIcon(ClassLoader.getSystemResource("messenger.png"));
+        final ImageIcon messengerIcon = new ImageIcon(ClassLoader.getSystemResource("icons/messenger.png"));
         messengerButton.setIcon(messengerIcon);
         messengerButton.setIconTextGap(18);
         messengerButton.setHorizontalAlignment(JButton.LEFT);
@@ -194,26 +201,25 @@ public class MainFrame extends JFrame {
         messengerButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent mouseEvent) {
-                final MessengerWorker worker = new MessengerWorker(posts -> {});
-                new WorkerFrame(worker).setVisible(true);
-                workerStack.pushWorker(worker);
+                //final MessengerWorker worker = new MessengerWorker(posts -> {});
+                new WorkerFrame(currentIc, WorkerType.MESSENGER_WORKER).setVisible(true);
             }
         });
 
         final JButton topicButton = new JButton("<html><b>Topic</b><br>Public discussion thread within a forum.</html>",
-                new ImageIcon(ClassLoader.getSystemResource("topic.png")));
+                new ImageIcon(ClassLoader.getSystemResource("icons/topic.png")));
         topicButton.setIconTextGap(18);
         topicButton.setHorizontalAlignment(JButton.LEFT);
         //topicButton.setFocusable(false);
 
         final JButton forumButton = new JButton("<html><b>Forum</b><br>Organized collection of topics.</html>",
-                new ImageIcon(ClassLoader.getSystemResource("forum.png")));
+                new ImageIcon(ClassLoader.getSystemResource("icons/forum.png")));
         forumButton.setIconTextGap(18);
         forumButton.setHorizontalAlignment(JButton.LEFT);
         //forumButton.setFocusable(false);
 
         final JButton blogButton = new JButton("<html><b>Blog</b><br>Personal writings on ridiculous subjects for unclear reasons.</html>",
-                new ImageIcon(ClassLoader.getSystemResource("blog.png")));
+                new ImageIcon(ClassLoader.getSystemResource("icons/blog.png")));
         blogButton.setIconTextGap(18);
         blogButton.setHorizontalAlignment(JButton.LEFT);
         //blogButton.setFocusable(false);
@@ -357,7 +363,7 @@ public class MainFrame extends JFrame {
         /////////////////////////////////////////////////////////////////////////////////////
 
         final JPanel fieldButtonsPanel = new JPanel(new GridBagLayout());
-        final JButton addButton = new JButton(new ImageIcon(ClassLoader.getSystemResource("add.png")));
+        final JButton addButton = new JButton(new ImageIcon(ClassLoader.getSystemResource("icons/add.png")));
         addButton.setEnabled(false);
         final JLabel errorLabel = new JLabel("Not a valid URL") {
             {
@@ -425,7 +431,7 @@ public class MainFrame extends JFrame {
                 addElementConsumer.accept(field.getText());
             }
         });
-        final JButton removeButton = new JButton(new ImageIcon(ClassLoader.getSystemResource("remove.png")));
+        final JButton removeButton = new JButton(new ImageIcon(ClassLoader.getSystemResource("icons/remove.png")));
         removeButton.setEnabled(false);
         removeButton.addMouseListener(new MouseAdapter() {
             @Override

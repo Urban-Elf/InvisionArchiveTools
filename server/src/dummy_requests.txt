@@ -1,0 +1,7 @@
+{"shared_action":"DISPATCH_WORKER","data":{"ic": {"version":4,"root_url":"https://catholicharbor.com"},"worker_type":"MESSENGER_WORKER"}}
+
+{"shared_action":"STATE_INPUT","worker_id":"da7a24cd-210a-4e94-89aa-86f00d2d40b3","data":{"client_object":true}}
+
+{"shared_action":"TERMINATE", "worker_id": null}
+
+{"shared_action":"TERMINATE_WORKER", "worker_id":"3032c355-0a6d-4a06-8afe-528ee8d8fd7f"}
