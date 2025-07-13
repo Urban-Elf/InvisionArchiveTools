@@ -19,14 +19,14 @@ import sys
 import json
 from . import util
 from .shared_constants import *
-from .serializable import Serializable
+from .serializable import JSONSerializable
 from .worker.state.worker_state import *
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Enum):
             return obj.name
-        elif isinstance(obj, Serializable):
+        elif isinstance(obj, JSONSerializable):
             return obj.__serialize__()
         return super().default(obj)
 
@@ -50,7 +50,7 @@ class ClientPacket:
             self.data = data
 
 # Server is this python module
-class ServerPacket(Serializable):
+class ServerPacket(JSONSerializable):
     def __init__(self, worker_id: str, shared_action: ServerSA):
         # Process identifier
         self.worker_id = worker_id

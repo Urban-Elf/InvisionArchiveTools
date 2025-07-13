@@ -21,7 +21,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
 from ...worker.ic_exceptions import ICWorkerException
-from ...content.messenger import *
+from ...content.messenger import Messenger
+from ...content.content import Post
 from ... import util
 import re
 

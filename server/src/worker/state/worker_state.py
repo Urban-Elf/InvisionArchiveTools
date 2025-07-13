@@ -18,7 +18,7 @@
 from ... import shared_constants
 from ... import serializable
 
-class ButtonConfig(serializable.Serializable):
+class ButtonConfig(serializable.JSONSerializable):
     def __init__(self, text: str, shared_action: shared_constants.ButtonCallbackSA=shared_constants.ButtonCallbackSA.NONE, client_object=True):
         self.text = text
         self.shared_action = shared_action
@@ -31,7 +31,7 @@ class ButtonConfig(serializable.Serializable):
             "client_object": self.client_object
         }
 
-class ICWorkerState(serializable.Serializable):
+class ICWorkerState(serializable.JSONSerializable):
     def __init__(self, note: str, hint: str="", button_configs: list[ButtonConfig]=None, indeterminate=True):
         self.note = note
         self.hint = hint
