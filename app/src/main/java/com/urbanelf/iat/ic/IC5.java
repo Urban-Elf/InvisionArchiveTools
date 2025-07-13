@@ -19,6 +19,8 @@
 
 package com.urbanelf.iat.ic;
 
+import org.json.JSONObject;
+
 public final class IC5 extends IC {
     private final transient String auth;
 
@@ -45,5 +47,12 @@ public final class IC5 extends IC {
     @Override
     public String toString() {
         return getRootUrl() + " (v5)";
+    }
+
+    @Override
+    public JSONObject toJson() {
+        return new JSONObject()
+                .put("root_url", getRootUrl())
+                .put("version", getVersionNumber());
     }
 }

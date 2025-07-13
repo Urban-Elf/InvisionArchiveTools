@@ -20,8 +20,10 @@
 package com.urbanelf.iat;
 
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.Collections;
 
@@ -32,8 +34,11 @@ public final class WebDriverFactory {
 
     public static ChromeDriver createChromeDriver() {
         final ChromeOptions options = new ChromeOptions();
+        // FIXME: TMP
+        options.setBinary(new File(ClassLoader.getSystemResource("chrome-linux64/chrome").getFile()));
         options.addArguments("--remote-allow-origins=*");
 
+        /*
         // Fixing 255 Error crashes
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
@@ -50,8 +55,15 @@ public final class WebDriverFactory {
 
         // Other
         options.addArguments("disable-infobars");
+        */
 
-        final ChromeDriver driver = new ChromeDriver(options);
+        ChromeDriverService service = new ChromeDriverService.Builder()
+                .usingDriverExecutable(new File(ClassLoader.getSystemResource("chrome-linux64/chromedriver-linux64/chromedriver").getFile()))
+                .usingAnyFreePort()
+                //.withVerbose(true)
+                .build();
+
+        final ChromeDriver driver = new ChromeDriver(service, options);
         driver.executeScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
 
         return driver;

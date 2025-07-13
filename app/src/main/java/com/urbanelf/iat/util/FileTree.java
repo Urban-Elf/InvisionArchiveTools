@@ -19,29 +19,37 @@
 
 package com.urbanelf.iat.util;
 
+import com.urbanelf.iat.Core;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.stream.Stream;
 
 import javax.swing.UIManager;
 
 public class FileTree {
+    private static final String TAG = FileTree.class.getSimpleName();
+
     private static final Path rootPath;
     private static final Path logPath;
+    private static final Path serverPath;
 
     private FileTree() {
     }
 
     static {
         switch (PlatformUtils.getRunningPlatform()) {
-            case Windows -> rootPath = Paths.get(System.getProperty("user.home"), "AppData", "Roaming", "ICT");
-            case Mac -> rootPath = Paths.get(System.getProperty("user.home"), "Library", "Application Support", "ICT");
+            case Windows -> rootPath = Paths.get(System.getProperty("user.home"), "AppData", "Roaming", "IAT");
+            case Mac -> rootPath = Paths.get(System.getProperty("user.home"), "Library", "Application Support", "IAT");
             // Linux, Unknown
-            default -> rootPath = Paths.get(System.getProperty("user.home"), ".ict");
+            default -> rootPath = Paths.get(System.getProperty("user.home"), ".iat");
         }
 
         logPath = rootPath.resolve("logs");
+        serverPath = rootPath.resolve("server");
 
         try {
             Files.createDirectories(logPath); // Build hierarchy
@@ -50,11 +58,29 @@ public class FileTree {
         }
     }
 
+    public static void deleteRecursively(Path path) throws IOException {
+        if (!Files.exists(path)) return;
+        final Stream<Path> walk = Files.walk(path)
+                .sorted(Comparator.reverseOrder()); // delete children before parents
+        walk.forEach(p -> {
+            try {
+                Files.deleteIfExists(p);
+            } catch (IOException e) {
+                Core.warning(TAG, "Failed to delete file + '" + p + "'");
+            }
+        });
+        walk.close();
+    }
+
     public static Path getRootPath() {
         return rootPath;
     }
 
     public static Path getLogPath() {
         return logPath;
+    }
+
+    public static Path getServerPath() {
+        return serverPath;
     }
 }

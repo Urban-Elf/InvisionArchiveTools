@@ -19,7 +19,11 @@
 
 package com.urbanelf.iat.ic;
 
-public abstract class IC {
+import com.urbanelf.iat.util.JSONSerializable;
+
+import org.json.JSONObject;
+
+public abstract class IC implements JSONSerializable {
     private final String rootUrl;
 
     public static String PHP_data(String urlString, String data) {

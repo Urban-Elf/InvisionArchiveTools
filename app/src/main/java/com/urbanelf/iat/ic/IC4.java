@@ -19,12 +19,14 @@
 
 package com.urbanelf.iat.ic;
 
+import org.json.JSONObject;
+
 public final class IC4 extends IC {
     private final transient String auth;
 
     public IC4(String rootUrl) {
         super(rootUrl);
-        this.auth = getRootUrl() + "login/";
+        this.auth = getRootUrl() + "/login/";
     }
 
     @Override
@@ -45,5 +47,12 @@ public final class IC4 extends IC {
     @Override
     public String toString() {
         return getRootUrl() + " (v4)";
+    }
+
+    @Override
+    public JSONObject toJson() {
+        return new JSONObject()
+                .put("root_url", getRootUrl())
+                .put("version", getVersionNumber());
     }
 }
