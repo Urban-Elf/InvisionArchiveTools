@@ -21,8 +21,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
 from ...worker.ic_exceptions import ICWorkerException
-from ...content.messenger import Messenger
-from ...content.content import Post
+from ...content.content import Messenger, Post
+from ...content.writers import JSONWriter
+from ... import proto_model
 from ... import util
 import re
 
@@ -38,17 +39,24 @@ class MessengerWorkerState:
                               indeterminate=False)
 
 class MessengerWorkerV4(IC4Worker):
-    def __init__(self, worker_id, ic, result_consumer):
-        super().__init__(worker_id, ic, result_consumer)
+    def __init__(self, worker_id, ic):
+        super().__init__(worker_id, ic)
 
     def execute(self):
         # Select messenger
         while not self.shutdown_event.is_set():
-            if not self.driver.current_url == self.ic.auth():
+            if not util.strip_url(self.ic.messenger()) in util.strip_url(self.driver.current_url):
                 self.driver.get(self.ic.messenger())
             self.set_state(MessengerWorkerState.SELECT_MESSENGER)
 
             self.set_state(MessengerWorkerState.ANALYZING)
+            try:
+                self.driver.find_element(By.XPATH, "//div[@id=\"elMessageViewer\"]//div[@class=\"ipsLoading\"]")
+                self.set_state(MessengerWorkerState.INVALID_MESSENGER)
+                continue
+            except:
+                pass
+
             try:
                 self.driver_await(EC.presence_of_element_located((By.XPATH,
                     "//div[@data-role=\"commentFeed\"]//article")), time=3)
@@ -60,36 +68,51 @@ class MessengerWorkerV4(IC4Worker):
         # Archive posts
         messenger = self.archive_posts()
 
-        for post in messenger.posts:
-                util.log(util.LogLevel.INFO, post.__serialize__().__str__() + "\n")
+        ############### DEBUG ################
+        #util.log(util.LogLevel.INFO, "Found " + str(messenger.posts.__len__()) + " posts, " + str(messenger.avatar_map.__len__()) + " avatars.")
+        #for post in messenger.posts:
+        #        util.log(util.LogLevel.INFO, post.__serialize__().__str__() + "\n")
+        #for key in messenger.avatar_map:
+        #    util.log(util.LogLevel.INFO, f"{key}: {messenger.avatar_map[key]}")
+        ######################################
 
-        for key in messenger.avatar_map:
-            util.log(util.LogLevel.INFO, f"{key}: {messenger.avatar_map[key]}")
+        # Export to temporary JSON file
+        path = JSONWriter.write(messenger)
+
+        # Notify client
+        proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.RESULT_AVAILABLE)
+                                 .add_data("path", path))
+        
+        self.set_state(SharedState.RESULT_AVAILABLE)
 
     def archive_posts(self):
         # Preparation
         page = 1
-        current_url = self.driver.current_url
-        page_url = current_url + "page/"
-        final_page_url = None
+        final_page = 1
+        page_url = self.driver.current_url + "?page="
 
         try:
-            pagination_last = self.driver.find_element(By.CSS_SELECTOR, "ul.ipsPagination > .ipsPagination_last > a")
+            pagination_last = self.driver.find_element(By.XPATH, "//div[@id=\"elMessageViewer\"]//li[@class=\"ipsPagination_last\"]/a")
+            util.log(util.LogLevel.INFO, "Found pagination last: " + pagination_last.get_attribute("href"))
             final_page_url = re.sub(r"#.*", "", pagination_last.get_attribute("href"))
+            match = re.search(r'\?page=(\d+)', final_page_url)
+            if match:
+                final_page = int(match.group(1))
         except NoSuchElementException as e:
-            raise ICWorkerException(f"Could not assess pagination length of messenger ({page_url})")
+            util.log(util.LogLevel.WARNING, "No pagination found, defaulting to single-paged messenger.")
+            pass
 
         # Archive
         self.set_state(MessengerWorkerState.ARCHIVING)
+
+        messenger = Messenger()
 
         while not self.shutdown_event.is_set():
             next_page_url = page_url + str(page) + "/"
 
             if page > 1:
                 self.driver.get(next_page_url)
-                self.driver_await(EC.url_changes(page_url + str(page) + "/"))
-
-            messenger = Messenger()
+                self.driver_await(EC.url_contains("?page=" + str(page)))
 
             # Comments feed
             self.driver_await(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-role=\"commentFeed\"]")))
@@ -97,6 +120,8 @@ class MessengerWorkerV4(IC4Worker):
 
             self.driver_await(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article")))
             articles = comments_feed.find_elements(By.CSS_SELECTOR, "article")
+
+            util.log(util.LogLevel.INFO, "Deconstructing articles (" + str(page) + "/" + str(final_page) + ")...")
 
             for article in articles:
                 author = article.find_element(By.CSS_SELECTOR, "h3.ipsComment_author")
@@ -109,29 +134,19 @@ class MessengerWorkerV4(IC4Worker):
                 content_str = content.get_attribute("innerHTML").strip()
 
                 comment_id = article.get_attribute("id").replace("elComment_", "")
-                link = current_url
-                if not link.endswith("/"):
-                    link += "/"
-                link += f"?page={page}#findComment-{comment_id}"
+                link = page_url + str(page) + "#findComment-" + comment_id
 
                 messenger.posts.append(Post(author=author_str, datetime=datetime_str, link=link, content=content_str))
                 
                 if not author_str in messenger.avatar_map:
                     avatar = article.find_element(By.CSS_SELECTOR, f"img[alt=\"{author_str}\"]").get_attribute("src")
-                    # TODO: HTMLWriter should download these and store them in a local dir (as they're transient)
                     messenger.avatar_map[author_str] = avatar
+
+            self.update_progress(float(page/final_page))
 
             page += 1
 
-            if final_page_url == None or next_page_url == final_page_url:
+            if page > final_page:
                 break
 
         return messenger
-
-
-
-
-
-
-
-

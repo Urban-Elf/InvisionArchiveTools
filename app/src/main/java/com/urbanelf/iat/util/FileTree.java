@@ -36,6 +36,7 @@ public class FileTree {
     private static final Path rootPath;
     private static final Path logPath;
     private static final Path serverPath;
+    private static final Path exportPath;
 
     private FileTree() {
     }
@@ -50,9 +51,12 @@ public class FileTree {
 
         logPath = rootPath.resolve("logs");
         serverPath = rootPath.resolve("server");
+        exportPath = rootPath.resolve("export");
 
         try {
             Files.createDirectories(logPath); // Build hierarchy
+            // Server path is created automatically
+            Files.createDirectories(exportPath);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

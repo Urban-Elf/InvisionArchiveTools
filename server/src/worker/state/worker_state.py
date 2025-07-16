@@ -53,13 +53,17 @@ class ICWorkerState(serializable.JSONSerializable):
 class SharedState:
     INITIALIZATION = ICWorkerState(note="Initializing... Please wait...")
     AUTH_REQUIRED = ICWorkerState(note="Please sign in to continue.",
-                                  hint="Sign in on the browser before pressing 'Proceed'",
-                                  button_configs=[ButtonConfig("Proceed")])
+                                  hint="Sign in on the browser before pressing 'Next'",
+                                  button_configs=[ButtonConfig("Next")])
     VALIDATING_SESSION = ICWorkerState(note="Validating session...")
     SESSION_INVALID = ICWorkerState(note="Session invalid. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
                                        hint="Please notify the developer (Help → Report Bug)",
                                        button_configs=[
-                                           ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG),
-                                           ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)])
+                                           ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE),
+                                           ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG)])
+    ATTEMPTING_RECONNECT = ICWorkerState(note="Connecting...")
+    RESULT_AVAILABLE = ICWorkerState(note="Task finished successfully.",
+                                     hint="Press the button to save the archive.",
+                                     button_configs=[ButtonConfig("Export Archive...", shared_action=shared_constants.ButtonCallbackSA.EXPORT_ARCHIVE),])

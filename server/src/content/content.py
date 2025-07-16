@@ -16,8 +16,9 @@
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
 from .. import serializable
+from ..shared_constants import ContentType
 
-class Content:
+class Content(serializable.JSONSerializable):
     pass
     
 class Post(serializable.JSONSerializable):
@@ -27,7 +28,7 @@ class Post(serializable.JSONSerializable):
         self.link = link
         self.content = content
 
-    def __serialize__(self):
+    def __serialize__(self) -> dict:
         return {
             "author": self.author,
             "datetime": self.datetime,
@@ -36,6 +37,18 @@ class Post(serializable.JSONSerializable):
         }
     
 class PostContent(Content):
-    def __init__(self):
-        self.posts: list[Post] = []
+    def __init__(self, type: ContentType):
+        self.type = type
         self.avatar_map: dict[str] = {}
+        self.posts: list[Post] = []
+
+    def __serialize__(self) -> dict:
+        return {
+            "type": self.type.name,
+            "avatar_map": self.avatar_map,
+            "posts": [post.__serialize__() for post in self.posts]
+        }
+
+class Messenger(PostContent):
+    def __init__(self):
+        super().__init__(ContentType.MESSENGER)

@@ -24,13 +24,19 @@ class ClientSA(Enum):
     STATE_INPUT = auto()
     # worker_id
     TERMINATE_WORKER = auto()
+    # <none>
     TERMINATE = auto()
 
 class ServerSA(Enum):
+    # data[uuid]
     UUID_AVAILABLE = auto()
+    # worker_id, data[stacktrace]
     CHROMEDRIVER_ERROR = auto()
+    # worker_id, data[state]
     STATE_CHANGED = auto()
+    # worker_id, data[progress]
     PROGRESS_UPDATE = auto()
+    # worker_id, data[path]
     RESULT_AVAILABLE = auto()
 
 class WorkerType(Enum):
@@ -38,6 +44,13 @@ class WorkerType(Enum):
     TOPIC_WORKER = auto()
     FORUM_WORKER = auto()
     BLOG_WORKER = auto()
+
+class ContentType(Enum):
+    MESSENGER = auto()
+    TOPIC = auto()
+    FORUM = auto()
+    BLOG = auto()
+    BLOG_ENTRY = auto()
 
 class ButtonCallbackSA(Enum):
     NONE = auto()

@@ -15,8 +15,6 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
-from .. import util
-
 class IC:
     def __init__(self, root_url):
         self.root_url = root_url
@@ -45,7 +43,6 @@ class IC:
 class IC4(IC):
     def __init__(self, json_data):
         super().__init__(json_data)
-
         self.auth_url = self.root_url + "/login"
         self.messenger_url = self.root_url + "/messenger"
 
@@ -61,7 +58,6 @@ class IC4(IC):
 class IC5(IC):
     def __init__(self, json_data):
         super().__init__(json_data)
-
         self.auth_url = self.root_url + "/login"
         self.messenger_url = self.root_url + "/messenger"
 

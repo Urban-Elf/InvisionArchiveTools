@@ -16,5 +16,5 @@
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
 class JSONSerializable:
-    def __serialize__(self):
+    def __serialize__(self) -> dict:
         raise NotImplementedError()

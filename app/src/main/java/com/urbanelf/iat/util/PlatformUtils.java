@@ -42,7 +42,7 @@ public class PlatformUtils {
     }
 
     public static Platform getRunningPlatform() {
-        return PLATFORM;
+        return Platform.Mac;
     }
 
     public enum Platform {

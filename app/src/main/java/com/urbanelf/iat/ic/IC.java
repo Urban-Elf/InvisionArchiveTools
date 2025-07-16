@@ -31,12 +31,8 @@ public abstract class IC implements JSONSerializable {
     }
 
     public IC(String rootUrl) {
-        this.rootUrl = rootUrl + "/";
+        this.rootUrl = rootUrl;
     }
-
-    public abstract String auth();
-
-    public abstract String messenger(int messengerId);
 
     public abstract int getVersionNumber();
 

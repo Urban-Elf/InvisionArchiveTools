@@ -19,6 +19,7 @@
 
 package com.urbanelf.iat.ui;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.urbanelf.iat.Core;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.IC4;
@@ -28,28 +29,36 @@ import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
 import com.urbanelf.iat.util.LocalStorage;
+import com.urbanelf.iat.util.PlatformUtils;
+import com.urbanelf.iat.util.ThemeManager;
 import com.urbanelf.iat.util.URLUtils;
 
 import org.json.JSONObject;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
+import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -60,6 +69,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListDataEvent;
@@ -70,6 +80,11 @@ public class MainFrame extends JFrame {
 
     private static final String LS_COMMUNITY_URLS = "community_urls";
 
+    private static final Dimension ICON_BUTTON_SIZE = new Dimension(28, 28);
+
+    private final int spacing;
+    private final int spacingSecondary;
+    private final ArrayList<FlatSVGIcon> managedIcons;
     private final DefaultListModel<IC> communityListModel;
     private final DefaultComboBoxModel<IC> currentCommunityModel;
     private final JComboBox<IC> currentCommunity;
@@ -90,6 +105,7 @@ public class MainFrame extends JFrame {
         setSize(new Dimension(854, 480));
         setLocationByPlatform(true);
 
+        managedIcons = new ArrayList<>();
         communityListModel = new DefaultListModel<>();
         currentCommunityModel = new DefaultComboBoxModel<>();
         currentCommunity = new JComboBox<>(currentCommunityModel);
@@ -99,8 +115,11 @@ public class MainFrame extends JFrame {
                 currentIc = ic;
         });
 
-        final JPanel panel = new JPanel(new BorderLayout(8, 8));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        spacing = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 6 : 12;
+        spacingSecondary = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 4 : 7;
+
+        final JPanel panel = new JPanel(new BorderLayout(spacing, spacing));
+        panel.setBorder(BorderFactory.createEmptyBorder(spacing, spacing, spacing, spacing));
 
         final JPanel centerPanel = createCenterPanel();
         final JPanel eastPanel = createEastPanel();
@@ -110,9 +129,11 @@ public class MainFrame extends JFrame {
 
         setContentPane(panel);
 
+        refreshIcons();
+
         // Deserialize persistent data
         try {
-            LocalStorage.getJson().getJSONArray(LS_COMMUNITY_URLS).forEach(object -> {
+            LocalStorage.getJsonObject().getJSONArray(LS_COMMUNITY_URLS).forEach(object -> {
                 try {
                     if (object instanceof JSONObject jsonObject) {
                         // Ignore malformed URLs
@@ -132,19 +153,19 @@ public class MainFrame extends JFrame {
         communityListModel.addListDataListener(new ListDataListener() {
             @Override
             public void intervalAdded(ListDataEvent listDataEvent) {
-                LocalStorage.getJson().put(LS_COMMUNITY_URLS, createJsonObjects());
+                LocalStorage.getJsonObject().put(LS_COMMUNITY_URLS, createJsonObjects());
                 LocalStorage.serialize();
             }
 
             @Override
             public void intervalRemoved(ListDataEvent listDataEvent) {
-                LocalStorage.getJson().put(LS_COMMUNITY_URLS, createJsonObjects());
+                LocalStorage.getJsonObject().put(LS_COMMUNITY_URLS, createJsonObjects());
                 LocalStorage.serialize();
             }
 
             @Override
             public void contentsChanged(ListDataEvent listDataEvent) {
-                LocalStorage.getJson().put(LS_COMMUNITY_URLS, createJsonObjects());
+                LocalStorage.getJsonObject().put(LS_COMMUNITY_URLS, createJsonObjects());
                 LocalStorage.serialize();
             }
 
@@ -162,12 +183,35 @@ public class MainFrame extends JFrame {
         });
     }
 
+    public void refreshIcons() {
+        managedIcons.forEach(icon -> {
+            final Color lafTextColor = UIManager.getColor("Button.foreground");
+            icon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> lafTextColor));
+        });
+    }
+
     private JPanel createCenterPanel() {
         final JPanel panel = new JPanel(new GridBagLayout());
 
-        panel.add(new JLabel("Choose content to archive...") {
+        panel.add(new JPanel(new BorderLayout()) {
             {
-                setFont(getFont().deriveFont(Font.BOLD, getFont().getSize()));
+                add(new JLabel("Choose content to archive...") {
+                    {
+                        //setFont(getFont().deriveFont(Font.BOLD, getFont().getSize()));
+                    }
+                }, BorderLayout.WEST);
+                final JButton iconButton = createToggleIconButton(new FlatSVGIcon[] {
+                        new FlatSVGIcon("icons/moon-solid.svg", 10, 14),
+                        new FlatSVGIcon("icons/sun-solid.svg", 14, 14)
+                    }, ThemeManager.isDark() ? 1 : 0);
+                iconButton.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent mouseEvent) {
+                        ThemeManager.toggleTheme(MainFrame.this::refreshIcons);
+                    }
+                });
+                iconButton.setToolTipText("Toggle theme");
+                add(iconButton, BorderLayout.EAST);
             }
         }, new GridBagConstraints() {
             {
@@ -191,13 +235,8 @@ public class MainFrame extends JFrame {
 
         final JPanel buttonsPanel = new JPanel(new GridBagLayout());
 
-        final JButton messengerButton = new JButton("<html><b>Messenger</b><br>Private conversation among community members.</html>");
-        final ImageIcon messengerIcon = new ImageIcon(ClassLoader.getSystemResource("icons/messenger.png"));
-        messengerButton.setIcon(messengerIcon);
-        messengerButton.setIconTextGap(18);
-        messengerButton.setHorizontalAlignment(JButton.LEFT);
-        //messengerButton.setFocusable(false);
-
+        final Component messengerButton = createContentButton("Messenger", "Private conversations among community members.",
+                "icons/envelope-solid.svg");
         messengerButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent mouseEvent) {
@@ -205,24 +244,14 @@ public class MainFrame extends JFrame {
                 new WorkerFrame(currentIc, WorkerType.MESSENGER_WORKER).setVisible(true);
             }
         });
+        final Component topicButton = createContentButton("Topic", "Public discussion threads within a forum.",
+                "icons/comment-solid.svg");
+        final Component forumButton = createContentButton("Forum", "Organized collections of topics.",
+                "icons/comments-solid-scaled-centered.svg");
+        final Component blogButton = createContentButton("Blog", "Public articles by individuals or groups.",
+                "icons/book-open-reader-solid.svg");
 
-        final JButton topicButton = new JButton("<html><b>Topic</b><br>Public discussion thread within a forum.</html>",
-                new ImageIcon(ClassLoader.getSystemResource("icons/topic.png")));
-        topicButton.setIconTextGap(18);
-        topicButton.setHorizontalAlignment(JButton.LEFT);
-        //topicButton.setFocusable(false);
-
-        final JButton forumButton = new JButton("<html><b>Forum</b><br>Organized collection of topics.</html>",
-                new ImageIcon(ClassLoader.getSystemResource("icons/forum.png")));
-        forumButton.setIconTextGap(18);
-        forumButton.setHorizontalAlignment(JButton.LEFT);
-        //forumButton.setFocusable(false);
-
-        final JButton blogButton = new JButton("<html><b>Blog</b><br>Personal writings on ridiculous subjects for unclear reasons.</html>",
-                new ImageIcon(ClassLoader.getSystemResource("icons/blog.png")));
-        blogButton.setIconTextGap(18);
-        blogButton.setHorizontalAlignment(JButton.LEFT);
-        //blogButton.setFocusable(false);
+        final int inset = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 4 : 8;
 
         buttonsPanel.add(messengerButton, new GridBagConstraints() {
             {
@@ -230,7 +259,6 @@ public class MainFrame extends JFrame {
                 this.gridy = 0;
                 this.weightx = 0.5f;
                 this.ipady = 20;
-                this.insets.set(0, 0, 4, 0);
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
@@ -240,6 +268,7 @@ public class MainFrame extends JFrame {
                 this.gridy = 1;
                 this.weightx = 0.5f;
                 this.ipady = 20;
+                this.insets.set(inset, 0, inset, 0);
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
@@ -249,7 +278,6 @@ public class MainFrame extends JFrame {
                 this.gridy = 2;
                 this.weightx = 0.5f;
                 this.ipady = 20;
-                this.insets.set(4, 0, 4, 0);
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
@@ -259,6 +287,7 @@ public class MainFrame extends JFrame {
                 this.gridy = 3;
                 this.weightx = 0.5f;
                 this.ipady = 20;
+                this.insets.set(inset, 0, 0, 0);
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
@@ -299,6 +328,19 @@ public class MainFrame extends JFrame {
         return panel;
     }
 
+    private JButton createContentButton(String name, String description, String icon) {
+        final JButton button = new JButton("<html><b>" + name + "</b><br>" + description + "</html>");
+        final FlatSVGIcon messengerIcon = new FlatSVGIcon(icon, 36, 36);
+        managedIcons.add(messengerIcon);
+        button.setIcon(messengerIcon);
+        button.setIconTextGap(18);
+        button.setHorizontalAlignment(JButton.LEFT);
+        //final JPanel wrapper = new JPanel(new GridLayout(1, 1));
+        //wrapper.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        //wrapper.add(button);
+        return button;
+    }
+
     private JPanel createEastPanel() {
         final JPanel panel = new JPanel(new GridBagLayout());
         panel.setPreferredSize(new Dimension(350, 0));
@@ -325,10 +367,11 @@ public class MainFrame extends JFrame {
 
     private JPanel createCommunitiesPanel() {
         final JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        panel.setBorder(BorderFactory.createEmptyBorder(spacingSecondary, spacingSecondary, spacingSecondary, spacingSecondary));
 
         final JList<IC> list = new JList<>(communityListModel);
         list.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        list.setFixedCellHeight(24);
         final JScrollPane listScroller = new JScrollPane(list) {
             final Dimension SIZE = new Dimension(300, 200);
 
@@ -347,7 +390,6 @@ public class MainFrame extends JFrame {
                 return SIZE;
             }
         };
-        //listScroller.setPreferredSize(new Dimension(120, 300));
 
         panel.add(listScroller, new GridBagConstraints() {
             {
@@ -362,8 +404,11 @@ public class MainFrame extends JFrame {
         /////////////////////////////////// FIELD BUTTONS ///////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////
 
-        final JPanel fieldButtonsPanel = new JPanel(new GridBagLayout());
-        final JButton addButton = new JButton(new ImageIcon(ClassLoader.getSystemResource("icons/add.png")));
+        final JPanel fieldButtonsPanel = new JPanel();
+        fieldButtonsPanel.setLayout(new BoxLayout(fieldButtonsPanel, BoxLayout.X_AXIS));
+
+        // Add button
+        final JButton addButton = createIconButton("icons/plus-solid.svg", 14, 14);
         addButton.setEnabled(false);
         final JLabel errorLabel = new JLabel("Not a valid URL") {
             {
@@ -383,8 +428,7 @@ public class MainFrame extends JFrame {
                 ic = ((Version) Objects.requireNonNull(version.getSelectedItem())).getIcClass()
                         .getDeclaredConstructor(String.class).newInstance(URLUtils.normalizeURLString(field.getText()));
             } catch (Exception e) {
-                e.printStackTrace();
-                // FIXME: Log error
+                Core.error(TAG, "Failed to construct IC", e);
                 return;
             }
             communityListModel.addElement(ic);
@@ -431,7 +475,7 @@ public class MainFrame extends JFrame {
                 addElementConsumer.accept(field.getText());
             }
         });
-        final JButton removeButton = new JButton(new ImageIcon(ClassLoader.getSystemResource("icons/remove.png")));
+        final JButton removeButton = createIconButton("icons/trash-solid.svg", 12, 14);
         removeButton.setEnabled(false);
         removeButton.addMouseListener(new MouseAdapter() {
             @Override
@@ -465,7 +509,19 @@ public class MainFrame extends JFrame {
             }
         });
 
-        fieldButtonsPanel.add(field, new GridBagConstraints() {
+        final int spacing = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 2 : 6;
+
+        fieldButtonsPanel.add(field);
+        fieldButtonsPanel.add(Box.createHorizontalStrut(spacing));
+        fieldButtonsPanel.add(version);
+        fieldButtonsPanel.add(Box.createHorizontalStrut(spacing));
+        fieldButtonsPanel.add(addButton);
+        fieldButtonsPanel.add(Box.createHorizontalStrut(spacing));
+        fieldButtonsPanel.add(new JSeparator(JSeparator.VERTICAL));
+        fieldButtonsPanel.add(Box.createHorizontalStrut(spacing));
+        fieldButtonsPanel.add(removeButton);
+
+        /*fieldButtonsPanel.add(field, new GridBagConstraints() {
             {
                 this.gridx = 0;
                 this.weightx = 0.5;
@@ -491,16 +547,16 @@ public class MainFrame extends JFrame {
             {
                 this.gridx = 4;
                 this.insets.set(0, 4, 0, 0);
-                this.fill = GridBagConstraints.VERTICAL;
+                this.fill = GridBagConstraints.NONE;
             }
-        });
+        });*/
 
         panel.add(fieldButtonsPanel, new GridBagConstraints() {
             {
                 this.gridy = 1;
                 this.weightx = 0.5f;
                 this.fill = GridBagConstraints.HORIZONTAL;
-                this.insets.set(8, 0, 6, 0);
+                this.insets.set(spacing, 0, 6, 0);
             }
         });
 
@@ -518,9 +574,65 @@ public class MainFrame extends JFrame {
         return panelWrapper;
     }
 
+    private JButton createToggleIconButton(FlatSVGIcon[] icons, int initialIndex) {
+        return createToggleIconButton(icons, null, initialIndex);
+    }
+
+    private JButton createToggleIconButton(FlatSVGIcon[] icons, Runnable[] runnables, int initialIndex) {
+        managedIcons.addAll(Arrays.asList(icons));
+        final JButton button = new JButton(icons[initialIndex]) {
+            @Override
+            public Dimension getMaximumSize() {
+                return ICON_BUTTON_SIZE;
+            }
+            @Override
+            public Dimension getMinimumSize() {
+                return ICON_BUTTON_SIZE;
+            }
+            @Override
+            public Dimension getPreferredSize() {
+                return ICON_BUTTON_SIZE;
+            }
+        };
+        button.addMouseListener(new MouseAdapter() {
+            private int index = initialIndex;
+
+            @Override
+            public void mouseClicked(MouseEvent mouseEvent) {
+                index++;
+                index = index % icons.length;
+                button.setIcon(icons[index]);
+                if (runnables != null)
+                    runnables[index].run();
+            }
+        });
+        return button;
+    }
+
+    private JButton createIconButton(String iconPath, int iconWidth, int iconHeight) {
+        final FlatSVGIcon icon = new FlatSVGIcon(iconPath, iconWidth, iconHeight);
+        managedIcons.add(icon);
+        final JButton button = new JButton(icon) {
+            @Override
+            public Dimension getMaximumSize() {
+                return ICON_BUTTON_SIZE;
+            }
+            @Override
+            public Dimension getMinimumSize() {
+                return ICON_BUTTON_SIZE;
+            }
+            @Override
+            public Dimension getPreferredSize() {
+                return ICON_BUTTON_SIZE;
+            }
+        };
+        return button;
+    }
+
     private JPanel createSettingsPanel() {
-        final JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        final JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(spacingSecondary, spacingSecondary, spacingSecondary, spacingSecondary));
 
         final JLabel errorLabel = new JLabel("No community selected.  Add one to begin archiving.") {
             {
@@ -547,25 +659,20 @@ public class MainFrame extends JFrame {
             }
         });
 
-        panel.add(currentCommunity, new GridBagConstraints() {
+        final Dimension size = currentCommunity.getPreferredSize();
+        size.height = 28;
+        currentCommunity.setPreferredSize(size);
+        panel.add(currentCommunity);
+        panel.add(new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 4)) {
             {
-                this.weightx = 0.5f;
-                this.fill = GridBagConstraints.HORIZONTAL;
-                this.insets.set(0, 0, 6, 0);
+                add(errorLabel);
             }
         });
 
-        panel.add(errorLabel, new GridBagConstraints() {
-            {
-                this.gridy = 1;
-                this.weightx = 0.5f;
-                this.fill = GridBagConstraints.HORIZONTAL;
-            }
-        });
-
-        final JPanel panelWrapper = new JPanel(new GridBagLayout());
+        final JPanel panelWrapper = new JPanel();
+        panelWrapper.setLayout(new BoxLayout(panelWrapper, BoxLayout.X_AXIS));
         panelWrapper.setBorder(BorderFactory.createTitledBorder("  Active Community  "));
-        panelWrapper.add(panel, new GridBagConstraints() {{ this.weightx = 0.5f; this.fill = GridBagConstraints.BOTH; }});
+        panelWrapper.add(panel);
 
         return panelWrapper;
     }
