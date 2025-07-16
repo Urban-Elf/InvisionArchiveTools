@@ -19,9 +19,6 @@
 
 package com.urbanelf.iat.util;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class URLUtils {
@@ -29,12 +26,6 @@ public class URLUtils {
 
     public static boolean isURLHTTP(String url) {
         return PROTOCOL_PATTERN.matcher(url).find();
-        /*try {
-            final URI uri = new URI(url);
-            return uri.isAbsolute() && uri.getScheme() == null || (uri.getScheme().equals("http") || uri.getScheme().equals("https"));
-        } catch (URISyntaxException e) {
-            return false;
-        }*/
     }
 
     public static String normalizeURLString(String url) {
@@ -48,5 +39,4 @@ public class URLUtils {
             url = url.substring(0, url.length()-1);
         return url;
     }
-
 }

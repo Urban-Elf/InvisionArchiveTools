@@ -8,6 +8,9 @@ dist
 # Local docs
 docs
 
+# Linux script
+auto-dist-server.sh
+
 # PyInstaller spec
 server.spec
 

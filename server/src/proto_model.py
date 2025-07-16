@@ -64,7 +64,7 @@ class ServerPacket(JSONSerializable):
         self.data[id] = data
         return self
     
-    def __serialize__(self):
+    def __serialize__(self) -> dict:
         return {
             "worker_id": self.worker_id,
             "shared_action": self.shared_action,

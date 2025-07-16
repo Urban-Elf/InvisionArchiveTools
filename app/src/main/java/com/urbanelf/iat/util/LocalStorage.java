@@ -19,51 +19,51 @@
 
 package com.urbanelf.iat.util;
 
+import com.urbanelf.iat.Core;
+
 import org.json.JSONObject;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 public class LocalStorage {
+    private static final String TAG = LocalStorage.class.getSimpleName();
+
     private static final Path FILE;
-    private static JSONObject json;
+    private static JSONObject JSON_OBJECT;
 
     private LocalStorage() {
     }
 
     static {
         FILE = FileTree.getRootPath().resolve("shared.json");
-        json = new JSONObject();
+        JSON_OBJECT = new JSONObject();
 
-        deserialize();
+        if (Files.exists(FILE))
+            deserialize();
     }
 
-    public static JSONObject getJson() {
-        return json;
+    public static JSONObject getJsonObject() {
+        return JSON_OBJECT;
     }
 
     public static void serialize() {
         try (FileWriter file = new FileWriter(FILE.toFile())) {
-            file.write(json.toString(4)); // 4 spaces indent
-            // Try-with-resources auto closes (meaning auto flush as well)
+            file.write(JSON_OBJECT.toString(4));
+            // auto-flushed and closed
         } catch (IOException e) {
-            e.printStackTrace();
-            // FIXME: Log error
+            Core.error(TAG, "Error serializing " + FILE, e);
         }
     }
 
     private static void deserialize() {
         try {
             final String content = Files.readString(FILE);
-            json = new JSONObject(content);
-        } catch (NoSuchFileException e) {
-            // Contingency for corrupted file
+            JSON_OBJECT = new JSONObject(content);
         } catch (IOException e) {
-            e.printStackTrace();
-            // FIXME: Log error
+            Core.error(TAG, "Error deserializing " + FILE, e);
         }
     }
 }

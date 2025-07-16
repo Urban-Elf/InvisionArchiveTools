@@ -65,7 +65,7 @@ public class PythonServer {
         }
 
         // Start server process
-        process = new ProcessBuilder(SERVER_EXECUTABLE_PATH.toAbsolutePath().toString())
+        process = new ProcessBuilder(SERVER_EXECUTABLE_PATH.toAbsolutePath().toString(), "--debug")
                 .start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

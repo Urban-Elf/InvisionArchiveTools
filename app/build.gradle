@@ -30,6 +30,9 @@ dependencies {
     // This dependency is used by the application.
     implementation libs.guava
 
+    implementation 'com.formdev:flatlaf:3.6'
+    implementation 'com.formdev:flatlaf-extras:3.6'
+    implementation 'com.formdev:flatlaf-intellij-themes:3.6'
     implementation 'org.seleniumhq.selenium:selenium-java:4.6.0'
     implementation 'org.json:json:20210307'
     //implementation("org.graalvm.polyglot:polyglot:24.2.1")

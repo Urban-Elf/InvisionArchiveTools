@@ -43,6 +43,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.math.BigDecimal;
 import java.net.URI;
 
 import javax.swing.BorderFactory;
@@ -74,28 +75,6 @@ public class WorkerFrame extends JFrame {
         this.ic = ic;
         this.workerType = workerType;
 
-        /*worker.addStateObserver(new ICWorkerStateObserver() {
-            @Override
-            public void stateChanged(ICWorkerState state) {
-                SwingUtilities.invokeLater(() -> {
-                    stateNote.setText(state.getNote());
-                    stateHint.setText(state.getHint());
-                    statePanelWrapper.removeAll();
-                    if (state.isProgressive()) {
-                        stateProgress.setIndeterminate(state.isIndeterminate());
-                        statePanelWrapper.add(progressiveStatePanel);
-                    } else {
-                        layoutSelectiveStatePanel(state);
-                        statePanelWrapper.add(selectiveStatePanel);
-                    }
-                });
-            }
-
-            @Override
-            public void progressChanged(float progress) {
-            }
-        });*/
-
         serverListener = new PythonServer.ServerListener() {
             @Override
             public void packetReceived(ServerPacket packet) {
@@ -106,23 +85,56 @@ public class WorkerFrame extends JFrame {
                     switch (packet.getSharedAction()) {
                         case UUID_AVAILABLE -> workerId = (String) packet.getData().get("uuid");
                         case CHROMEDRIVER_ERROR -> {
+                            final String stacktrace = (String) packet.getData().get("stacktrace");
+
+                            // Network failure
+                            final String networkText = """
+                                    IAT failed to start chromedriver.
+                                    
+                                    Please verify that you're connected to the internet, and try again.
+                                    
+                                    """;
+
+                            // Fallback (Version or exe issue)
+                            final String link = "https://www.google.com/chrome/";
+                            final String auxLink;
+
+                            switch (PlatformUtils.getRunningPlatform()) {
+                                case Windows -> auxLink = "https://google-chrome.en.uptodown.com/windows/versions";
+                                case Mac ->  auxLink = "https://google-chrome.en.uptodown.com/mac/versions";
+                                default -> auxLink = "";
+                            }
+
+                            final String generalText = "IAT failed to start chromedriver.\n"
+                                    + "Please verify you have Chrome installed on your machine, and try again.\n\n"
+                                    + "Download at: " + link + "\n\n"
+                                    + (auxLink.isEmpty() ? "" : "If the issue persists, try downloading it instead from:\n\n"
+                                    + auxLink + "\n");
+
+                            // Determine exception
+                            final String text;
+                            final String[] options;
+                            final Runnable okAction;
+                            if (stacktrace.contains("Network is unreachable")) {
+                                options = new String[] {"Close", "OK"};
+                                text = networkText;
+                                okAction = () -> {};
+                            } else {
+                                options = new String[] {"Close", auxLink.isEmpty() ? "Open Link" : "Open Links"};
+                                text = generalText;
+                                okAction = () -> {
+                                    try {
+                                        Desktop.getDesktop().browse(URI.create(link));
+                                        Desktop.getDesktop().browse(URI.create(auxLink));
+                                    } catch (Exception e) {
+                                        Core.error(TAG, e);
+                                    }
+                                };
+                            }
+
                             SwingUtilities.invokeLater(() -> {
-                                final String link = "https://www.google.com/chrome/";
-                                final String auxLink;
-
-                                switch (PlatformUtils.getRunningPlatform()) {
-                                    case Windows -> auxLink = "https://google-chrome.en.uptodown.com/windows/versions";
-                                    case Mac ->  auxLink = "https://google-chrome.en.uptodown.com/mac/versions";
-                                    default -> auxLink = "";
-                                }
-
-                                Object[] options = {"Close", auxLink.isEmpty() ? "Open Link" : "Open Links"};
                                 int n = JOptionPane.showOptionDialog(null,
-                                        "IAT failed to start chromedriver.\n"
-                                                + "Please verify you have Chrome installed on your machine, and try again.\n\n"
-                                                + "Download it at: " + link + "\n\n"
-                                                + (auxLink.isEmpty() ? "" : "If the issue persists, try downloading it instead from:\n\n"
-                                                + auxLink + "\n"),
+                                        text,
                                         "An error occurred",
                                         JOptionPane.YES_NO_OPTION,
                                         JOptionPane.ERROR_MESSAGE,
@@ -130,14 +142,9 @@ public class WorkerFrame extends JFrame {
                                         options,
                                         options[1]);
 
-                                if (n == 1) {
-                                    try {
-                                        Desktop.getDesktop().browse(URI.create(link));
-                                        Desktop.getDesktop().browse(URI.create(auxLink));
-                                    } catch (Exception e) {
-                                        Core.error(TAG, e);
-                                    }
-                                }
+                                if (n == 1)
+                                    okAction.run();
+
                                 // Destroy frame
                                 dispatchEvent(new WindowEvent(WorkerFrame.this, WindowEvent.WINDOW_CLOSING));
                             });
@@ -159,10 +166,8 @@ public class WorkerFrame extends JFrame {
                             });
                         }
                         case PROGRESS_UPDATE -> {
-                            final Object object = packet.getData().get("progress");
-                            if (!(object instanceof Float))
-                                throw new PacketException("data entry 'progress' must be of type float");
-                            SwingUtilities.invokeLater(() -> stateProgress.setValue((int) (((float) object) * stateProgress.getMaximum())));
+                            final BigDecimal object = (BigDecimal) packet.getData().get("progress");
+                            SwingUtilities.invokeLater(() -> stateProgress.setValue((int) (object.floatValue() * stateProgress.getMaximum())));
                         }
                         case RESULT_AVAILABLE -> {
                         }
@@ -268,7 +273,21 @@ public class WorkerFrame extends JFrame {
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent mouseEvent) {
-                    config.sharedAction().run();
+                    switch (config.sharedAction()) {
+                        case OPEN_LOG -> {
+                            try {
+                                Desktop.getDesktop().browseFileDirectory(Core.getLogFile());
+                            } catch (Exception e) {
+                                Core.error(TAG, "Error opening log: '" + Core.getLogFile().getName() + "'", e);
+                            }
+                        }
+                        case EXPORT_CONTENT -> {
+                        }
+                        case TERMINATE -> {
+                            // Destroy frame
+                            dispatchEvent(new WindowEvent(WorkerFrame.this, WindowEvent.WINDOW_CLOSING));
+                        }
+                    }
                     PythonServer.writePacket(new ClientPacket(workerId, ClientSA.STATE_INPUT)
                             .addData("client_object", config.clientObject()));
                 }

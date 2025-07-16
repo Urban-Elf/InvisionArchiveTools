@@ -15,10 +15,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
-import sys
 import threading
 import time
-import psutil
+import traceback
+from ..file_tree import ROOT_PATH
+from .. import main
 from .. import proto_model
 from .. import util
 from .ic import *
@@ -27,17 +28,30 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import *
+import undetected_chromedriver
+import screeninfo
 
-class ICWorkerConsumer:
-    def accept(self, obj):
-        pass
+def load_credentials():
+    creds_file = ROOT_PATH / 'auth.txt'
+    if not creds_file.is_file():
+        raise FileNotFoundError()
+
+    creds = {}
+    with creds_file.open() as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("username: "):
+                creds['username'] = line[len("username: "):].strip()
+            elif line.startswith("password: "):
+                creds['password'] = line[len("password: "):].strip()
+
+    return creds
 
 class ICWorker(threading.Thread):
-    def __init__(self, worker_id: str, ic: IC, result_consumer: ICWorkerConsumer):
+    def __init__(self, worker_id: str, ic: IC):
         super().__init__(name=worker_id)
         self.worker_id = worker_id
         self.ic = ic
-        self.result_consumer = result_consumer
         self.shutdown_event = threading.Event()
 
     def execute(self):
@@ -51,24 +65,58 @@ class ICWorker(threading.Thread):
 
     def run(self):
         try:
+            # Import IC_ChromeDriver here to avoid circular imports
+            from .ic_chromedriver import IC_ChromeDriver
+            # Set initial state
             self.set_state(SharedState.INITIALIZATION)
             # Create chromedriver
             util.log(util.LogLevel.INFO, "Starting chromedriver...")
             try:
                 # Attempt to start the browser
-                self.driver = util.create_chromedriver()
+                self.driver: IC_ChromeDriver = create_chromedriver(self)
             except:
-                proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.CHROMEDRIVER_ERROR))
+                proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.CHROMEDRIVER_ERROR)
+                                         .add_data("stacktrace", traceback.format_exc()))
                 util.log(util.LogLevel.FATAL, "Failed to start chromedriver: ", error_trace=True)
-                util.log(util.LogLevel.INFO, "Please ensure your Chrome version matches the required ChromeDriver version.")
-                self.driver.quit()
+                # Must be assigned before shutdown in this context
+                self.driver = None
+                # Shutdown worker
+                self.shutdown()
                 return
 
             # Authenticate
             while not self.shutdown_event.is_set():
-                if not self.driver.current_url == self.ic.auth():
+                if not util.strip_url(self.ic.auth()) in util.strip_url(self.driver.current_url):
                     self.driver.get(self.ic.auth())
-                self.set_state(SharedState.AUTH_REQUIRED)
+
+                # Auto login (for testing)
+                if main.DEBUG:
+                    try:
+                        creds = load_credentials()
+
+                        self.driver_await(EC.all_of(
+                            EC.presence_of_element_located((By.ID, "auth")),
+                            EC.presence_of_element_located((By.NAME, "password")),
+                            EC.presence_of_element_located((By.NAME, "_processLogin"))))
+
+                        auth = self.driver.find_element(By.ID, "auth")
+                        password = self.driver.find_element(By.NAME, "password")
+
+                        auth.send_keys(creds["username"])
+                        password.send_keys(creds["password"])
+
+                        login = self.driver.find_element(By.NAME, "_processLogin")
+
+                        self.driver_await(lambda d: login.is_displayed())
+
+                        login.click()
+
+                        time.sleep(2) # Wait for login to process
+                    except FileNotFoundError:
+                        util.log(util.LogLevel.WARNING, "Auth file not found, resorting to manual login.")
+                        self.set_state(SharedState.AUTH_REQUIRED)
+                else:
+                    self.set_state(SharedState.AUTH_REQUIRED)
 
                 # Validate session
                 self.set_state(SharedState.VALIDATING_SESSION)
@@ -79,11 +127,12 @@ class ICWorker(threading.Thread):
                     continue
                 # Valid session
                 break
-            util.log(util.LogLevel.INFO, "Session validated, proceeding...")
+            util.log(util.LogLevel.INFO, "Session valid, proceeding...")
             # Start worker
             self.execute()
         except BaseException:
             util.log(util.LogLevel.FATAL, "An internal error occurred: ", error_trace=True)
+            self.set_state(SharedState.INTERNAL_EXCEPTION)
 
     def set_state(self, state: ICWorkerState):
         self.state = state
@@ -95,10 +144,15 @@ class ICWorker(threading.Thread):
                 time.sleep(0.1)
         return self.client_object
 
+    def on_shutdown():
+        pass
+
     def shutdown(self):
         self.shutdown_event.set()
-        self.driver.quit()
-        self.driver.close()
+        if (self.driver is not None):
+            self.driver.quit()
+            self.driver.close()
+        self.on_shutdown()
 
     def set_client_object(self, client_object):
         self.client_object = client_object
@@ -108,9 +162,25 @@ class ICWorker(threading.Thread):
             .add_data("progress", progress))
 
 class IC4Worker(ICWorker):
-    def __init__(self, worker_id, ic, result_consumer):
-        super().__init__(worker_id, ic, result_consumer)
+    def __init__(self, worker_id, ic):
+        super().__init__(worker_id, ic)
 
 class IC5Worker(ICWorker):
-    def __init__(self, worker_id, ic, result_consumer):
-        super().__init__(worker_id, ic, result_consumer)
+    def __init__(self, worker_id, ic):
+        super().__init__(worker_id, ic)
+
+from .ic_chromedriver import IC_ChromeDriver
+
+def create_chromedriver(ic_worker: ICWorker) -> IC_ChromeDriver:
+    options = undetected_chromedriver.ChromeOptions()
+    options.add_argument("--disable-infobars")
+
+    # TODO: Use this to check whether the user to installed chrome: print(undetected_chromedriver.find_chrome_executable())
+    driver = IC_ChromeDriver(ic_worker=ic_worker, options=options)
+
+    # Get screen width and height
+    screen = screeninfo.get_monitors()[0]  # primary monitor
+    width = screen.width // 2.4
+    height = screen.height
+    driver.set_window_rect(0, 0, width, height)
+    return driver

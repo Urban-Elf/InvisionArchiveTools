@@ -16,35 +16,22 @@
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
 import sys
+import re
 import threading
 import traceback
 from enum import Enum, auto
-import undetected_chromedriver
-import screeninfo
-#from selenium.webdriver.chrome.options import Options
-#from webdriver_manager.chrome import ChromeDriverManager
 
 TAG_REGEX = r'<[^>]+>'
+URL_REGEX = r'^https?://(www\.)?'
+
+def strip_url(url: str):
+    return re.sub(URL_REGEX, '', url)
 
 def validate_json_data(json_data: str):
     if not isinstance(json_data, str):
         raise TypeError("json_data must be of type string")
     if len(json_data.strip()) == 0:
         raise TypeError("json_data cannot be empty")
-
-def create_chromedriver():
-    options = undetected_chromedriver.ChromeOptions()
-    options.add_argument("--disable-infobars")
-
-    # TODO: Use this to check whether the user to installed chrome: print(undetected_chromedriver.find_chrome_executable())
-    driver = undetected_chromedriver.Chrome(options=options)
-
-    # Get screen width and height
-    screen = screeninfo.get_monitors()[0]  # primary monitor
-    width = screen.width // 2.4
-    height = screen.height
-    driver.set_window_rect(0, 0, width, height)
-    return driver
 
 class LogLevel(Enum):
     INFO = auto()

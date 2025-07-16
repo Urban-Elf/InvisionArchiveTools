@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 public enum ButtonCallbackSA {
     NONE(params -> {}),
-    OPEN_LOGS(params -> {
+    OPEN_LOG(params -> {
 
     }),
     EXPORT_CONTENT(params -> {}),

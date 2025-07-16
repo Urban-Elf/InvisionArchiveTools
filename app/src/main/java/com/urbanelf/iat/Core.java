@@ -28,6 +28,7 @@ import com.urbanelf.iat.util.DefaultLogger;
 import com.urbanelf.iat.util.FileTree;
 import com.urbanelf.iat.util.Logger;
 import com.urbanelf.iat.util.PlatformUtils;
+import com.urbanelf.iat.util.ThemeManager;
 import com.urbanelf.iat.util.function.QuadConsumer;
 import com.urbanelf.iat.util.function.TriConsumer;
 
@@ -52,8 +53,6 @@ import java.util.stream.Stream;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
@@ -252,12 +251,14 @@ public class Core {
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        try {
+        ThemeManager.applyDefaultTheme();
+
+        /*try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
                  UnsupportedLookAndFeelException e) {
             throw new RuntimeException(e);
-        }
+        }*/
 
         Benchmark.begin();
         new JFXPanel(); // Initialize JavaFX
@@ -313,6 +314,10 @@ public class Core {
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static File getLogFile() {
+        return logFile;
     }
 
     public static void info(String tag, String message) {
