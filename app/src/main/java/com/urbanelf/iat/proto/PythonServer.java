@@ -20,6 +20,7 @@
 package com.urbanelf.iat.proto;
 
 import com.urbanelf.iat.Core;
+import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.util.FileTree;
 import com.urbanelf.iat.util.PlatformUtils;
 
@@ -69,6 +70,15 @@ public class PythonServer {
                 .start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            // Send TERMINATE signal
+            PythonServer.writePacket(new ClientPacket(ClientSA.TERMINATE));
+
+            try {
+                // Wait for process to finish
+                process.waitFor(3, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+            }
+
             process.destroy();
 
             try {

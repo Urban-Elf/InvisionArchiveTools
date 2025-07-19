@@ -21,11 +21,13 @@ package com.urbanelf.iat;
 
 import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.ui.MainFrame;
+import com.urbanelf.iat.ui.TOAFrame;
 import com.urbanelf.iat.util.ArrayUtils;
 import com.urbanelf.iat.util.Benchmark;
 import com.urbanelf.iat.util.DateUtils;
 import com.urbanelf.iat.util.DefaultLogger;
 import com.urbanelf.iat.util.FileTree;
+import com.urbanelf.iat.util.LocalStorage;
 import com.urbanelf.iat.util.Logger;
 import com.urbanelf.iat.util.PlatformUtils;
 import com.urbanelf.iat.util.ThemeManager;
@@ -62,6 +64,7 @@ public class Core {
     private static final String TAG = Core.class.getSimpleName();
 
     public static final String DEVELOPER_EMAIL = "iat.legacy037@aleeas.com";
+    private static final String LS_AGREED_TO_TERMS = "agreed_to_terms";
 
     private static FileChooser FILE_CHOOSER;
 
@@ -268,8 +271,18 @@ public class Core {
             FILE_CHOOSER.setInitialDirectory(new File(System.getProperty("user.home")));
 
             SwingUtilities.invokeLater(() -> {
-                new MainFrame().setVisible(true);
-                //new WorkerFrame(null).setVisible(true);
+                if (LocalStorage.getJsonObject().has(LS_AGREED_TO_TERMS)) {
+                    new MainFrame().setVisible(true);
+                } else {
+                    new TOAFrame() {
+                        @Override
+                        protected void result(boolean accepted) {
+                            LocalStorage.getJsonObject().put(LS_AGREED_TO_TERMS, true);
+                            LocalStorage.serialize();
+                            new MainFrame().setVisible(true);
+                        }
+                    }.setVisible(true);
+                }
             });
         });
 

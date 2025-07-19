@@ -41,6 +41,8 @@ public class LocalStorage {
         FILE = FileTree.getRootPath().resolve("shared.json");
         JSON_OBJECT = new JSONObject();
 
+
+
         if (Files.exists(FILE))
             deserialize();
     }
