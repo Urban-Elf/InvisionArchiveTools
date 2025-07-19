@@ -276,7 +276,7 @@ public class WorkerFrame extends JFrame {
                     switch (config.sharedAction()) {
                         case OPEN_LOG -> {
                             try {
-                                Desktop.getDesktop().browseFileDirectory(Core.getLogFile());
+                                Desktop.getDesktop().open(Core.getLogFile());
                             } catch (Exception e) {
                                 Core.error(TAG, "Error opening log: '" + Core.getLogFile().getName() + "'", e);
                             }

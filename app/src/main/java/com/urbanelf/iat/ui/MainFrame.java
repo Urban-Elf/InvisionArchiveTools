@@ -21,6 +21,7 @@ package com.urbanelf.iat.ui;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.urbanelf.iat.Core;
+import com.urbanelf.iat.Version;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.IC4;
 import com.urbanelf.iat.ic.IC5;
@@ -28,9 +29,13 @@ import com.urbanelf.iat.proto.ClientPacket;
 import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
+import com.urbanelf.iat.ui.component.JLinkLabel;
+import com.urbanelf.iat.util.DateUtils;
+import com.urbanelf.iat.util.FileTree;
 import com.urbanelf.iat.util.LocalStorage;
 import com.urbanelf.iat.util.PlatformUtils;
 import com.urbanelf.iat.util.ThemeManager;
+import com.urbanelf.iat.util.UIUtils;
 import com.urbanelf.iat.util.URLUtils;
 
 import org.json.JSONObject;
@@ -38,11 +43,14 @@ import org.json.JSONObject;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -60,15 +68,24 @@ import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -90,19 +107,21 @@ public class MainFrame extends JFrame {
     private final JComboBox<IC> currentCommunity;
 
     private IC currentIc;
+    private ArrayList<JButton> workerButtons;
+    private WorkerFrame currentWorker;
 
     public MainFrame() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Invision Archive Tools");
 
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                PythonServer.writePacket(new ClientPacket(ClientSA.TERMINATE));
-            }
-        });
+        // Create the menu bar
+        final JMenuBar menuBar = createMenuBar();
 
-        setSize(new Dimension(854, 480));
+        // Set the menu bar on the frame
+        setJMenuBar(menuBar);
+
+        setMinimumSize(new Dimension(762, 436));
+        setSize(new Dimension(904, 486));
         setLocationByPlatform(true);
 
         managedIcons = new ArrayList<>();
@@ -114,18 +133,24 @@ public class MainFrame extends JFrame {
             if (ic != null)
                 currentIc = ic;
         });
+        workerButtons = new ArrayList<>();
 
         spacing = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 6 : 12;
         spacingSecondary = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 4 : 7;
 
-        final JPanel panel = new JPanel(new BorderLayout(spacing, spacing));
-        panel.setBorder(BorderFactory.createEmptyBorder(spacing, spacing, spacing, spacing));
+        final JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(spacing, spacing + 2, spacing, spacing + 2));
 
         final JPanel centerPanel = createCenterPanel();
-        final JPanel eastPanel = createEastPanel();
 
-        panel.add(centerPanel, BorderLayout.CENTER);
-        panel.add(eastPanel, BorderLayout.EAST);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.VERTICAL;
+        gbc.weightx = 1.0f; // Allows it to take up space
+        gbc.weighty = 1.0f; // Allows it to take up space
+        panel.add(centerPanel, gbc);//, BorderLayout.CENTER);
+        //panel.add(eastPanel, BorderLayout.EAST);
 
         setContentPane(panel);
 
@@ -183,11 +208,264 @@ public class MainFrame extends JFrame {
         });
     }
 
+    private JMenuBar createMenuBar() {
+        final JMenuBar menuBar = new JMenuBar();
+
+        // Session
+        final JMenu sessionMenu = new JMenu("Session");
+        sessionMenu.add(new JMenuItem("Quit") {
+            {
+                addActionListener(e -> System.exit(0));
+            }
+        });
+        menuBar.add(sessionMenu);
+
+        // Help
+        final JMenu helpMenu = new JMenu("Help");
+
+        // Create menu items
+        final JMenuItem reportBugItem = new JMenuItem("Report Bug");
+        final JMenuItem aboutItem = new JMenuItem("About");
+
+        // "Report Bug" section
+        final JPanel reportBugPanel = new JPanel();
+        reportBugPanel.setLayout(new BoxLayout(reportBugPanel, BoxLayout.Y_AXIS));
+        reportBugPanel.add(new JLabel("<html>If there's an issue you've encountered, please report it to the developer" +
+                "<br>via one of the methods listed below."));
+        reportBugPanel.add(Box.createVerticalStrut(10)); // spacing
+        reportBugPanel.add(new JLabel("<html>Please attach or concatenate the relevant log files with the message." +
+                "<br>If you have any questions, feel free to ask in advance!</html>"));
+        reportBugPanel.add(Box.createVerticalStrut(12)); // spacing
+        reportBugPanel.add(new JLabel("<html>  - Email:</html>"));
+        reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
+        reportBugPanel.add(new JLinkLabel("mailto:" + Core.DEVELOPER_EMAIL, "mailto:" + Core.DEVELOPER_EMAIL + "?subject=Bug%20Report"));
+        reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
+        reportBugPanel.add(new JLabel("<html>  - Catholic Harbor:</html>"));
+        reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
+        reportBugPanel.add(new JLinkLabel("https://www.catholicharbor.com/messenger/compose/?to=7190"));
+        reportBugPanel.add(Box.createVerticalStrut(4)); // spacing
+
+        // Add event listeners
+        reportBugItem.addActionListener(e -> {
+            // Custom button labels
+            String[] options = {"Open Logs Directory", "Close"};
+
+            SwingUtilities.updateComponentTreeUI(reportBugPanel);
+            reportBugPanel.revalidate();
+            reportBugPanel.repaint();
+
+            int result = JOptionPane.showOptionDialog(
+                    MainFrame.this,
+                    reportBugPanel,
+                    "Report a Bug",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            );
+
+            if (result == 0) {
+                try {
+                    Desktop.getDesktop().open(FileTree.getLogPath().toFile());
+                } catch (Exception ex) {
+                    Core.error(TAG, "Failed to open log directory", ex);
+                }
+            } else {
+            }
+        });
+
+        // "About" Panel
+        final JPanel aboutPanel = createAboutPanel();
+
+        aboutItem.addActionListener(e -> {
+            String[] options = {"Close"};
+
+            SwingUtilities.updateComponentTreeUI(aboutPanel);
+            aboutPanel.revalidate();
+            aboutPanel.repaint();
+
+            JOptionPane.showOptionDialog(
+                    MainFrame.this,
+                    aboutPanel,
+                    "About",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            );
+        });
+
+        // Add items to the menu
+        helpMenu.add(reportBugItem);
+        helpMenu.add(aboutItem);
+
+        // Add the menu to the menu bar
+        menuBar.add(helpMenu);
+
+        return menuBar;
+    }
+
+    private JPanel createAboutPanel() {
+        // "About" tab
+        final JPanel aboutPanel = new JPanel(new GridBagLayout());
+
+        aboutPanel.add(Box.createVerticalStrut(6), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 0;
+            }
+        }); // spacing
+        aboutPanel.add(new JLabel(new FlatSVGIcon("icon-shadow.svg", 134, 134)) {
+            {
+                setMaximumSize(getPreferredSize());
+            }
+        }, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 1;
+            }
+        });
+        aboutPanel.add(Box.createVerticalStrut(20), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 2;
+            }
+        }); // spacing
+        aboutPanel.add(new JLabel("Invision Archive Tools v" + com.urbanelf.iat.Version.VERSION) {
+            {
+                setMaximumSize(getPreferredSize());
+            }
+        }, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 3;
+            }
+        });
+        aboutPanel.add(Box.createVerticalStrut(16), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 4;
+            }
+        }); // spacing
+        final String year = DateUtils.year();
+        aboutPanel.add(new JLabel("© Copyright " + (year.equals("2025") ? year : "2025-" + year) + " Mark \"Urban-Elf\" Fisher"), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 5;
+            }
+        });
+        aboutPanel.add(Box.createVerticalStrut(20), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 6;
+            }
+        }); // spacing
+        aboutPanel.add(new JLabel("This program is provided with absolutely no warranty."), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 7;
+            }
+        });
+        aboutPanel.add(Box.createVerticalStrut(14), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 8;
+            }
+        }); // spacing
+        aboutPanel.add(new JPanel() {
+            {
+                setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+                add(new JLabel("See the "));
+                //add(Box.createHorizontalStrut(4));
+                add(new JLinkLabel("GNU General Public License, version 3 or later", "https://www.gnu.org/licenses/"));
+                //add(Box.createHorizontalStrut(4));
+                add(new JLabel(" for details."));
+            }
+        }, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 9;
+            }
+        });
+
+        // "Credits" tab
+        final JPanel creditsPanel = new JPanel(new GridBagLayout());
+        creditsPanel.add(Box.createVerticalStrut(6), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 0;
+            }
+        }); // spacing
+
+        final JLabel credits = new JLabel("""
+                <html>
+                <br>
+                <b>Core Development</b><br><br>
+                  - Mark "Urban-Elf" Fisher
+                <br><br><br>
+                
+                <b>UI/UX Design</b>
+                <br><br>
+                  - Mark "Urban-Elf" Fisher
+                <br><br><br>
+                
+                <b>UI Themes</b>
+                <br><br>
+                  - FlatLaF Project
+                <br><br><br>
+                
+                <b>Asset Attributions</b>
+                <br><br>
+                  - "envelope-solid.svg": FontAwesome<br>
+                  - "comment-solid.svg": FontAwesome<br>
+                  - "comments-solid-scaled.svg": FontAwesome<br>
+                  - "book-open-reader-solid.svg": FontAwesome<br>
+                  - "plus-solid.svg": FontAwesome<br>
+                  - "trash-solid.svg": FontAwesome<br>
+                  - "sun-solid.svg": FontAwesome<br>
+                  - "moon-solid.svg": FontAwesome<br><br>
+                  
+                  - "drill.svg" (app icon): iconify.design<br>
+                  - "archive.svg" (app icon): iconify.design<br>
+                <br>
+                </html>
+                """, JLabel.CENTER);
+
+        creditsPanel.add(new JScrollPane(credits) {
+            {
+                UIUtils.height(this, 350);
+            }
+        }, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 1;
+                this.weightx = 1;
+                this.fill = GridBagConstraints.BOTH;
+            }
+        });
+
+        final JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("About", aboutPanel);
+        tabbedPane.addTab("Credits", creditsPanel);
+
+        final JPanel wrapper = new JPanel(new GridLayout(1, 0));
+        wrapper.add(tabbedPane);
+
+        return wrapper;
+    }
+
     public void refreshIcons() {
         managedIcons.forEach(icon -> {
             final Color lafTextColor = UIManager.getColor("Button.foreground");
             icon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> lafTextColor));
         });
+    }
+
+    private void setCurrentWorker(WorkerFrame frame) {
+        currentWorker = frame;
+        workerButtons.forEach(button -> button.setEnabled(frame == null));
     }
 
     private JPanel createCenterPanel() {
@@ -219,7 +497,8 @@ public class MainFrame extends JFrame {
                 this.gridy = 0;
                 this.weightx = 0.5f;
                 this.fill = GridBagConstraints.HORIZONTAL;
-                this.insets.set(0, 8, 0, 0);
+                final int inset = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 8 : 6;
+                this.insets.set(0, inset, 0, 0);
             }
         });
 
@@ -227,28 +506,22 @@ public class MainFrame extends JFrame {
             {
                 this.gridx = 0;
                 this.gridy = 1;
-                //this.weightx = 0.5f;
-                //this.fill = GridBagConstraints.HORIZONTAL;
-                this.insets.set(8, 0, 12, 0);
+                this.weightx = 0.5f;
+                this.fill = GridBagConstraints.HORIZONTAL;
+                final int inset = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 3 : 1;
+                this.insets.set(8, inset, 12, inset);
             }
         });
 
         final JPanel buttonsPanel = new JPanel(new GridBagLayout());
 
-        final Component messengerButton = createContentButton("Messenger", "Private conversations among community members.",
+        final Component messengerButton = createContentButton(WorkerType.MESSENGER_WORKER, "Messenger", "Private conversations among community members.",
                 "icons/envelope-solid.svg");
-        messengerButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent mouseEvent) {
-                //final MessengerWorker worker = new MessengerWorker(posts -> {});
-                new WorkerFrame(currentIc, WorkerType.MESSENGER_WORKER).setVisible(true);
-            }
-        });
-        final Component topicButton = createContentButton("Topic", "Public discussion threads within a forum.",
+        final Component topicButton = createContentButton(WorkerType.TOPIC_WORKER, "Topic", "Public discussion threads within a forum.",
                 "icons/comment-solid.svg");
-        final Component forumButton = createContentButton("Forum", "Organized collections of topics.",
-                "icons/comments-solid-scaled-centered.svg");
-        final Component blogButton = createContentButton("Blog", "Public articles by individuals or groups.",
+        final Component forumButton = createContentButton(WorkerType.FORUM_WORKER, "Forum", "Organized collections of topics.",
+                "icons/comments-solid-scaled.svg");
+        final Component blogButton = createContentButton(WorkerType.BLOG_WORKER, "Blog", "Public articles by individuals or groups.",
                 "icons/book-open-reader-solid.svg");
 
         final int inset = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 4 : 8;
@@ -258,7 +531,6 @@ public class MainFrame extends JFrame {
                 this.gridx = 0;
                 this.gridy = 0;
                 this.weightx = 0.5f;
-                this.ipady = 20;
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
@@ -267,7 +539,6 @@ public class MainFrame extends JFrame {
                 this.gridx = 0;
                 this.gridy = 1;
                 this.weightx = 0.5f;
-                this.ipady = 20;
                 this.insets.set(inset, 0, inset, 0);
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
@@ -277,7 +548,6 @@ public class MainFrame extends JFrame {
                 this.gridx = 0;
                 this.gridy = 2;
                 this.weightx = 0.5f;
-                this.ipady = 20;
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
@@ -286,7 +556,6 @@ public class MainFrame extends JFrame {
                 this.gridx = 0;
                 this.gridy = 3;
                 this.weightx = 0.5f;
-                this.ipady = 20;
                 this.insets.set(inset, 0, 0, 0);
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
@@ -297,7 +566,7 @@ public class MainFrame extends JFrame {
                 this.gridx = 0;
                 this.gridy = 2;
                 this.weightx = 0.5f;
-                this.fill = GridBagConstraints.BOTH;
+                this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
 
@@ -325,19 +594,48 @@ public class MainFrame extends JFrame {
             }
         });
 
-        return panel;
+        final JPanel panelWrapper = new JPanel();
+        panelWrapper.setLayout(new BoxLayout(panelWrapper, BoxLayout.X_AXIS));
+        UIUtils.minWidth(panelWrapper, 850);
+        UIUtils.prefWidth(panelWrapper, 1200);
+        UIUtils.maxWidth(panelWrapper, 1200);
+        panelWrapper.add(panel);
+        panelWrapper.add(Box.createHorizontalStrut(spacing));
+        panelWrapper.add(createEastPanel());
+
+        return panelWrapper;
     }
 
-    private JButton createContentButton(String name, String description, String icon) {
+    private JButton createContentButton(WorkerType type, String name, String description, String icon) {
         final JButton button = new JButton("<html><b>" + name + "</b><br>" + description + "</html>");
+        UIUtils.minWidth(button, 500);
+        //UIUtils.prefWidth(button, 350);
+        UIUtils.height(button, 70);
         final FlatSVGIcon messengerIcon = new FlatSVGIcon(icon, 36, 36);
         managedIcons.add(messengerIcon);
         button.setIcon(messengerIcon);
         button.setIconTextGap(18);
         button.setHorizontalAlignment(JButton.LEFT);
-        //final JPanel wrapper = new JPanel(new GridLayout(1, 1));
-        //wrapper.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        //wrapper.add(button);
+        // Add to managed buttons
+        workerButtons.add(button);
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent mouseEvent) {
+                if (!button.isEnabled())
+                    return;
+                setCurrentWorker(new WorkerFrame(currentIc, type) {
+                    {
+                        addWindowListener(new WindowAdapter() {
+                            @Override
+                            public void windowClosed(WindowEvent windowEvent) {
+                                setCurrentWorker(null);
+                            }
+                        });
+                        setVisible(true);
+                    }
+                });
+            }
+        });
         return button;
     }
 
@@ -509,7 +807,7 @@ public class MainFrame extends JFrame {
             }
         });
 
-        final int spacing = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 2 : 6;
+        final int spacing = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 3 : 6;
 
         fieldButtonsPanel.add(field);
         fieldButtonsPanel.add(Box.createHorizontalStrut(spacing));
@@ -556,7 +854,8 @@ public class MainFrame extends JFrame {
                 this.gridy = 1;
                 this.weightx = 0.5f;
                 this.fill = GridBagConstraints.HORIZONTAL;
-                this.insets.set(spacing, 0, 6, 0);
+                final int inset = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 8 : 10;
+                this.insets.set(inset, 0, 6, 0);
             }
         });
 
