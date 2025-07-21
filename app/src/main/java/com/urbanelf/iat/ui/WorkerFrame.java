@@ -23,7 +23,6 @@ import com.urbanelf.iat.Core;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.state.ICWorkerState;
 import com.urbanelf.iat.proto.ClientPacket;
-import com.urbanelf.iat.proto.PacketException;
 import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.proto.ServerPacket;
 import com.urbanelf.iat.proto.constants.ClientSA;
@@ -252,6 +251,12 @@ public class WorkerFrame extends JFrame {
         //statePanelWrapper.add(selectiveStatePanel);
     }
 
+    public void updateComponentTreeUI() {
+        SwingUtilities.updateComponentTreeUI(this);
+        SwingUtilities.updateComponentTreeUI(progressiveStatePanel);
+        SwingUtilities.updateComponentTreeUI(selectiveStatePanel);
+    }
+
     private JPanel layoutProgressiveStatePanel() {
         final JPanel panel = new JPanel(new GridBagLayout());
         panel.add(stateProgress, new GridBagConstraints() {
@@ -281,7 +286,7 @@ public class WorkerFrame extends JFrame {
                                 Core.error(TAG, "Error opening log: '" + Core.getLogFile().getName() + "'", e);
                             }
                         }
-                        case EXPORT_CONTENT -> {
+                        case EXPORT_ARCHIVE -> {
                         }
                         case TERMINATE -> {
                             // Destroy frame

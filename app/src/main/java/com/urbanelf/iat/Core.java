@@ -254,14 +254,8 @@ public class Core {
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        // Setup default LaF
         ThemeManager.applyDefaultTheme();
-
-        /*try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-                 UnsupportedLookAndFeelException e) {
-            throw new RuntimeException(e);
-        }*/
 
         Benchmark.begin();
         new JFXPanel(); // Initialize JavaFX

@@ -21,6 +21,7 @@ from . import util
 from . import shared_constants
 from .worker import ic_worker
 from .worker.v4 import messenger_worker
+from .worker.v4 import topic_worker
 from . import proto_model
 from .worker.ic import *
 
@@ -37,9 +38,18 @@ WORKER_VERSION_MAP = {
         4: messenger_worker.MessengerWorkerV4,
         5: None # FIXME
     },
-    shared_constants.WorkerType.TOPIC_WORKER: None,
-    shared_constants.WorkerType.FORUM_WORKER: None,
-    shared_constants.WorkerType.BLOG_WORKER: None,
+    shared_constants.WorkerType.TOPIC_WORKER: {
+        4: topic_worker.TopicWorkerV4,
+        5: None
+    },
+    shared_constants.WorkerType.FORUM_WORKER: {
+        4: None,
+        5: None
+    },
+    shared_constants.WorkerType.BLOG_WORKER: {
+        4: None,
+        5: None
+    },
 }
 
 ACTIVE_WORKERS = {}

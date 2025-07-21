@@ -5,3 +5,10 @@
 {"shared_action":"TERMINATE", "worker_id": null}
 
 {"shared_action":"TERMINATE_WORKER", "worker_id":"ae2b7ad4-66c1-4118-8aba-8445b272d997"}
+
+
+
+
+
+
+{"shared_action":"DISPATCH_WORKER","data":{"ic": {"version":4,"root_url":"https://catholicharbor.com"},"worker_type":"TOPIC_WORKER"}}

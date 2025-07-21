@@ -26,7 +26,7 @@ public enum ButtonCallbackSA {
     OPEN_LOG(params -> {
 
     }),
-    EXPORT_CONTENT(params -> {}),
+    EXPORT_ARCHIVE(params -> {}),
     TERMINATE(params -> {
 
     });

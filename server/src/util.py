@@ -27,6 +27,12 @@ URL_REGEX = r'^https?://(www\.)?'
 def strip_url(url: str):
     return re.sub(URL_REGEX, '', url)
 
+def strip_tags(text: str):
+    """
+    Strips HTML tags from the given text.
+    """
+    return re.sub(TAG_REGEX, '', text)
+
 def validate_json_data(json_data: str):
     if not isinstance(json_data, str):
         raise TypeError("json_data must be of type string")

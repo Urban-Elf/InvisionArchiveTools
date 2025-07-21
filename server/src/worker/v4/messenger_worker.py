@@ -20,14 +20,14 @@ from ...worker.state.worker_state import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
-from ...worker.ic_exceptions import ICWorkerException
-from ...content.content import Messenger, Post
+from ...content.content import Post
+from ...content.messenger import Messenger
 from ...content.writers import JSONWriter
 from ... import proto_model
 from ... import util
 import re
 
-class MessengerWorkerState:
+class MessengerWorkerV4State:
     SELECT_MESSENGER = ICWorkerState(note="Select a messenger to archive.",
                                      hint="Click on a messenger in the browser and press 'Next'",
                                      button_configs=[ButtonConfig("Next")])
@@ -47,12 +47,12 @@ class MessengerWorkerV4(IC4Worker):
         while not self.shutdown_event.is_set():
             if not util.strip_url(self.ic.messenger()) in util.strip_url(self.driver.current_url):
                 self.driver.get(self.ic.messenger())
-            self.set_state(MessengerWorkerState.SELECT_MESSENGER)
+            self.set_state(MessengerWorkerV4State.SELECT_MESSENGER)
 
-            self.set_state(MessengerWorkerState.ANALYZING)
+            self.set_state(MessengerWorkerV4State.ANALYZING)
             try:
                 self.driver.find_element(By.XPATH, "//div[@id=\"elMessageViewer\"]//div[@class=\"ipsLoading\"]")
-                self.set_state(MessengerWorkerState.INVALID_MESSENGER)
+                self.set_state(MessengerWorkerV4State.INVALID_MESSENGER)
                 continue
             except:
                 pass
@@ -63,7 +63,7 @@ class MessengerWorkerV4(IC4Worker):
                 # Valid session
                 break
             except TimeoutException:
-                self.set_state(MessengerWorkerState.INVALID_MESSENGER)
+                self.set_state(MessengerWorkerV4State.INVALID_MESSENGER)
 
         # Archive posts
         messenger = self.archive_posts()
@@ -85,6 +85,8 @@ class MessengerWorkerV4(IC4Worker):
         
         self.set_state(SharedState.RESULT_AVAILABLE)
 
+        self.shutdown()
+
     def archive_posts(self):
         # Preparation
         page = 1
@@ -100,10 +102,9 @@ class MessengerWorkerV4(IC4Worker):
                 final_page = int(match.group(1))
         except NoSuchElementException as e:
             util.log(util.LogLevel.WARNING, "No pagination found, defaulting to single-paged messenger.")
-            pass
 
         # Archive
-        self.set_state(MessengerWorkerState.ARCHIVING)
+        self.set_state(MessengerWorkerV4State.ARCHIVING)
 
         messenger = Messenger()
 
@@ -123,12 +124,15 @@ class MessengerWorkerV4(IC4Worker):
 
             util.log(util.LogLevel.INFO, "Deconstructing articles (" + str(page) + "/" + str(final_page) + ")...")
 
+            # Group posts by page (25/page by IC default)
+            page_posts: list[Post] = []
+
             for article in articles:
                 author = article.find_element(By.CSS_SELECTOR, "h3.ipsComment_author")
                 datetime = article.find_element(By.CSS_SELECTOR, "time")
                 content = article.find_element(By.CSS_SELECTOR, "div[data-role=\"commentContent\"]")
 
-                author_str: str = re.sub(util.TAG_REGEX, "", author.get_attribute("innerHTML"))
+                author_str: str = util.strip_tags(author.get_attribute("innerHTML"))
                 author_str = author_str.strip()
                 datetime_str = datetime.get_attribute("title").strip()
                 content_str = content.get_attribute("innerHTML").strip()
@@ -136,12 +140,16 @@ class MessengerWorkerV4(IC4Worker):
                 comment_id = article.get_attribute("id").replace("elComment_", "")
                 link = page_url + str(page) + "#findComment-" + comment_id
 
-                messenger.posts.append(Post(author=author_str, datetime=datetime_str, link=link, content=content_str))
+                page_posts.append(Post(author=author_str, datetime=datetime_str, link=link, content=content_str))
                 
                 if not author_str in messenger.avatar_map:
                     avatar = article.find_element(By.CSS_SELECTOR, f"img[alt=\"{author_str}\"]").get_attribute("src")
                     messenger.avatar_map[author_str] = avatar
 
+            # Append page
+            messenger.pages.append(page_posts)
+
+            # Update progress
             self.update_progress(float(page/final_page))
 
             page += 1
