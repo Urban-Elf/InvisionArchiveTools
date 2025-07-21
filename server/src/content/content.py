@@ -37,18 +37,16 @@ class Post(serializable.JSONSerializable):
         }
     
 class PostContent(Content):
-    def __init__(self, type: ContentType):
+    def __init__(self, title: str, type: ContentType):
+        self.title = title
         self.type = type
-        self.avatar_map: dict[str] = {}
-        self.posts: list[Post] = []
+        self.avatar_map: dict[str, str] = {}
+        self.pages: list[list[Post]] = []
 
     def __serialize__(self) -> dict:
         return {
+            "title": self.title,
             "type": self.type.name,
             "avatar_map": self.avatar_map,
-            "posts": [post.__serialize__() for post in self.posts]
+            "posts": [[post.__serialize__() for post in page] for page in self.pages]
         }
-
-class Messenger(PostContent):
-    def __init__(self):
-        super().__init__(ContentType.MESSENGER)

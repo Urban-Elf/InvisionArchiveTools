@@ -21,13 +21,9 @@ package com.urbanelf.iat.ui;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.urbanelf.iat.Core;
-import com.urbanelf.iat.Version;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.IC4;
 import com.urbanelf.iat.ic.IC5;
-import com.urbanelf.iat.proto.ClientPacket;
-import com.urbanelf.iat.proto.PythonServer;
-import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
 import com.urbanelf.iat.ui.component.JLinkLabel;
 import com.urbanelf.iat.util.DateUtils;
@@ -49,8 +45,6 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -68,7 +62,6 @@ import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -81,10 +74,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -99,6 +90,10 @@ public class MainFrame extends JFrame {
 
     private static final Dimension ICON_BUTTON_SIZE = new Dimension(28, 28);
 
+    private final JLinkLabel starOnGitHub;
+    private final FlatSVGIcon githubMark;
+    private final FlatSVGIcon githubMarkWhite;
+
     private final int spacing;
     private final int spacingSecondary;
     private final ArrayList<FlatSVGIcon> managedIcons;
@@ -107,12 +102,19 @@ public class MainFrame extends JFrame {
     private final JComboBox<IC> currentCommunity;
 
     private IC currentIc;
-    private ArrayList<JButton> workerButtons;
+    private final ArrayList<JButton> workerButtons;
     private WorkerFrame currentWorker;
 
     public MainFrame() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Invision Archive Tools");
+
+        starOnGitHub = new JLinkLabel("Star on GitHub", "https://github.com/Urban-Elf/InvisionArchiveTools/");
+        starOnGitHub.setIconTextGap(8);
+        final int iconWidth = 25,//98 / 4,
+                iconHeight = 24;//96 / 4;
+        githubMark = new FlatSVGIcon("github/github-mark.svg", iconWidth, iconHeight);
+        githubMarkWhite = new FlatSVGIcon("github/github-mark-white.svg", iconWidth, iconHeight);
 
         // Create the menu bar
         final JMenuBar menuBar = createMenuBar();
@@ -120,7 +122,7 @@ public class MainFrame extends JFrame {
         // Set the menu bar on the frame
         setJMenuBar(menuBar);
 
-        setMinimumSize(new Dimension(762, 436));
+        setMinimumSize(new Dimension(770, 440));
         setSize(new Dimension(904, 486));
         setLocationByPlatform(true);
 
@@ -231,14 +233,18 @@ public class MainFrame extends JFrame {
         final JPanel reportBugPanel = new JPanel();
         reportBugPanel.setLayout(new BoxLayout(reportBugPanel, BoxLayout.Y_AXIS));
         reportBugPanel.add(new JLabel("<html>If there's an issue you've encountered, please report it to the developer" +
-                "<br>via one of the methods listed below."));
+                "<br>via one of the methods below."));
         reportBugPanel.add(Box.createVerticalStrut(10)); // spacing
-        reportBugPanel.add(new JLabel("<html>Please attach or concatenate the relevant log files with the message." +
+        reportBugPanel.add(new JLabel("<html>Please attach or concatenate relevant log files with the message." +
                 "<br>If you have any questions, feel free to ask in advance!</html>"));
         reportBugPanel.add(Box.createVerticalStrut(12)); // spacing
         reportBugPanel.add(new JLabel("<html>  - Email:</html>"));
         reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
         reportBugPanel.add(new JLinkLabel("mailto:" + Core.DEVELOPER_EMAIL, "mailto:" + Core.DEVELOPER_EMAIL + "?subject=Bug%20Report"));
+        reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
+        reportBugPanel.add(new JLabel("<html>  - Github:</html>"));
+        reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
+        reportBugPanel.add(new JLinkLabel("https://github.com/Urban-Elf/InvisionArchiveTools/issues/new"));
         reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
         reportBugPanel.add(new JLabel("<html>  - Catholic Harbor:</html>"));
         reportBugPanel.add(Box.createVerticalStrut(8)); // spacing
@@ -333,7 +339,7 @@ public class MainFrame extends JFrame {
                 this.gridy = 2;
             }
         }); // spacing
-        aboutPanel.add(new JLabel("Invision Archive Tools v" + com.urbanelf.iat.Version.VERSION) {
+        aboutPanel.add(new JLabel("<html><b>Invision Archive Tools</b></html>") {
             {
                 setMaximumSize(getPreferredSize());
             }
@@ -343,35 +349,51 @@ public class MainFrame extends JFrame {
                 this.gridy = 3;
             }
         });
-        aboutPanel.add(Box.createVerticalStrut(16), new GridBagConstraints() {
+        aboutPanel.add(Box.createVerticalStrut(3), new GridBagConstraints() {
             {
                 this.gridx = 0;
                 this.gridy = 4;
+            }
+        }); // spacing
+        aboutPanel.add(new JLabel("<html><h4>v" + com.urbanelf.iat.Version.VERSION + "</h4></html>") {
+            {
+                setMaximumSize(getPreferredSize());
+            }
+        }, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 5;
+            }
+        });
+        aboutPanel.add(Box.createVerticalStrut(11), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 6;
             }
         }); // spacing
         final String year = DateUtils.year();
         aboutPanel.add(new JLabel("© Copyright " + (year.equals("2025") ? year : "2025-" + year) + " Mark \"Urban-Elf\" Fisher"), new GridBagConstraints() {
             {
                 this.gridx = 0;
-                this.gridy = 5;
+                this.gridy = 7;
             }
         });
         aboutPanel.add(Box.createVerticalStrut(20), new GridBagConstraints() {
             {
                 this.gridx = 0;
-                this.gridy = 6;
+                this.gridy = 8;
             }
         }); // spacing
         aboutPanel.add(new JLabel("This program is provided with absolutely no warranty."), new GridBagConstraints() {
             {
                 this.gridx = 0;
-                this.gridy = 7;
+                this.gridy = 9;
             }
         });
         aboutPanel.add(Box.createVerticalStrut(14), new GridBagConstraints() {
             {
                 this.gridx = 0;
-                this.gridy = 8;
+                this.gridy = 10;
             }
         }); // spacing
         aboutPanel.add(new JPanel() {
@@ -386,7 +408,25 @@ public class MainFrame extends JFrame {
         }, new GridBagConstraints() {
             {
                 this.gridx = 0;
-                this.gridy = 9;
+                this.gridy = 11;
+            }
+        });
+        aboutPanel.add(Box.createVerticalStrut(16), new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 12;
+            }
+        }); // spacing
+        aboutPanel.add(new JPanel(new FlowLayout(FlowLayout.RIGHT)) {
+            {
+                add(starOnGitHub);
+            }
+        }, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 13;
+                this.weightx = 1.0f;
+                this.fill = GridBagConstraints.HORIZONTAL;
             }
         });
 
@@ -429,6 +469,9 @@ public class MainFrame extends JFrame {
                   
                   - "drill.svg" (app icon): iconify.design<br>
                   - "archive.svg" (app icon): iconify.design<br>
+                  
+                  - "github-mark.svg: https://github.com/logos<br>
+                  - "github-mark-white.svg": https://github.com/logos<br>
                 <br>
                 </html>
                 """, JLabel.CENTER);
@@ -461,6 +504,7 @@ public class MainFrame extends JFrame {
             final Color lafTextColor = UIManager.getColor("Button.foreground");
             icon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> lafTextColor));
         });
+        starOnGitHub.setIcon(ThemeManager.isDark() ? githubMarkWhite : githubMark);
     }
 
     private void setCurrentWorker(WorkerFrame frame) {
@@ -486,6 +530,8 @@ public class MainFrame extends JFrame {
                     @Override
                     public void mouseClicked(MouseEvent mouseEvent) {
                         ThemeManager.toggleTheme(MainFrame.this::refreshIcons);
+                        if (currentWorker != null)
+                            currentWorker.updateComponentTreeUI();
                     }
                 });
                 iconButton.setToolTipText("Toggle theme");
