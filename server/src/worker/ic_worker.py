@@ -52,6 +52,7 @@ class ICWorker(threading.Thread):
         super().__init__(name=worker_id)
         self.worker_id = worker_id
         self.ic = ic
+        self.driver = None
         self.shutdown_event = threading.Event()
 
     def execute(self):
@@ -79,7 +80,6 @@ class ICWorker(threading.Thread):
                                          .add_data("stacktrace", traceback.format_exc()))
                 util.log(util.LogLevel.FATAL, "Failed to start chromedriver: ", error_trace=True)
                 # Must be assigned before shutdown in this context
-                self.driver = None
                 # Shutdown worker
                 self.shutdown()
                 return

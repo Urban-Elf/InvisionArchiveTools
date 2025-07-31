@@ -19,10 +19,33 @@
 
 package com.urbanelf.iat.proto.constants;
 
+import com.urbanelf.iat.content.ArchiveFormat;
+import com.urbanelf.iat.content.parser.PostParser;
+import com.urbanelf.iat.content.parser.Parser;
+import com.urbanelf.iat.content.writer.Writer;
+import com.urbanelf.iat.content.writer.html.MessengerHTMLWriter;
+
+import java.util.HashMap;
+
 public enum ContentType {
-    MESSENGER,
-    TOPIC,
-    FORUM,
-    BLOG,
-    BLOG_ENTRY
+    MESSENGER(new PostParser()) {{ getWriterMap().put(ArchiveFormat.HTML, new MessengerHTMLWriter()); }},
+    TOPIC(new PostParser()),
+    FORUM(null),
+    BLOG_ENTRY(null);
+
+    private final Parser parser;
+    private final HashMap<ArchiveFormat, Writer> writerMap;
+
+    ContentType(Parser parser) {
+        this.parser = parser;
+        this.writerMap = new HashMap<>();
+    }
+
+    public Parser getParser() {
+        return parser;
+    }
+
+    public HashMap<ArchiveFormat, Writer> getWriterMap() {
+        return writerMap;
+    }
 }

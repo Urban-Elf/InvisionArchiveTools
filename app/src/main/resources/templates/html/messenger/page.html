@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${title}">Invision Community Messenger</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../res/main.css">
+    <link rel="stylesheet" href="../res/main.css">
+    <link rel="stylesheet" href="../res/blockquote.css">
+    <link rel="stylesheet" href="../res/common.css">
+    <!-- Manifest -->
+    <script id="manifest-json" type="application/json" th:utext="${manifest}"></script>
+    <script defer>
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute("data-theme");
+            const next = current === "light" ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", next);
+            localStorage.setItem("theme", next);
+        }
+
+        // Try to load the theme from localStorage
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+            document.documentElement.setAttribute("data-theme", savedTheme);
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll('article a[href]').forEach(link => {
+                const isExternal = !link.getAttribute('target'); // skip if already set
+                if (isExternal) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer'); // security best practice
+                }
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+		    const backToTopBtn = document.getElementById('aXenBackTopBottom');
+		    const threshold = 200;
+
+		    backToTopBtn.addEventListener('click', () => {
+			    window.scrollTo({ top: 0, behavior: 'smooth' });
+		    });
+
+		    window.addEventListener('scroll', () => {
+			    if (window.scrollY > threshold) {
+				    backToTopBtn.style.opacity = 1;
+			    } else {
+				    backToTopBtn.style.opacity = 0;
+			    }
+		    });
+	    });
+    </script>
+</head>
+<body>
+<header>
+    <div class="title">
+        <div class="flex">
+            <i class="fa-solid fa-envelope"></i>
+            <h2 th:text="${title}">Invision Community Messenger</h2>
+        </div>
+        <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle-btn" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+        </button>
+    </div>
+    <div class="content">
+        <div class="participants-container">
+            <div class="participants">
+                <a th:each="data : ${userData}" th:href="${data.value.profileUrl}" th:title="'Go to ' + ${data.key} + '\'s profile'" target="_blank">
+                    <img class="avatar" th:src="@{${data.value.avatarUrl}}">
+                </a>
+            </div>
+            <span class="stats" th:text="${stats}"></span>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="pagination-controls" style="margin-bottom: 2rem;"></div>
+    <div id="post-container">
+        <div th:each="article, iterStat : ${posts}">
+            <div th:replace="messenger/article :: articleFragment(${article}, ${iterStat.index}, ${userData[article.author]})"></div>
+        </div>
+    </div>
+    <div class="pagination-controls" style="margin-top: 2rem;"></div>
+    <a id="aXenBackTopBottom" style="opacity: 0; pointer-events: all;"><i class="fas fa-chevron-up"></i></a>
+</main>
+
+<footer>
+    <p>© Copyright 2025 Urban-Elf. Themes inspired by <a target="_blank" href="https://invisioncommunity.com" style="text-decoration: none; font-weight: 600;">Invision Community</a>.</p>
+    <div class="socials">
+        <a target="_blank" href="https://github.com/Urban-Elf/InvisionArchiveTools"><i class="social fa-brands fa-github"></i></a>
+        <a target="_blank" href="mailto:iat.legacy037@aleeas.com"><i class="fa-solid fa-at"></i></a>
+        <a href="https://www.catholicharbor.com/messenger/compose/?to=7190"><i class="social fa-solid fa-envelope"></i></a>
+    </div>
+</footer>
+
+<script src="../res/pagination.js" defer></script>
+<script src="../res/blockquote.js" defer></script>
+<script src="../res/timestamp.js" defer></script>
+
+</body>
+</html>
+
+

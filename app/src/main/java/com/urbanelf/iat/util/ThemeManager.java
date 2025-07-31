@@ -27,9 +27,9 @@ import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import com.urbanelf.iat.Core;
 
-import net.bytebuddy.asm.Advice;
-
 import org.json.JSONException;
+
+import java.awt.Font;
 
 import javax.swing.*;
 
@@ -38,10 +38,23 @@ public class ThemeManager {
 
     private static final String LS_THEME = "theme";
 
-    private static final FlatDarkLaf FLAT_DARK_LAF = new FlatDarkLaf();
-    private static final FlatLightLaf FLAT_LIGHT_LAF = new FlatLightLaf();
-    private static final FlatMacDarkLaf FLAT_MAC_DARK_LAF = new FlatMacDarkLaf();
-    private static final FlatMacLightLaf FLAT_MAC_LIGHT_LAF = new FlatMacLightLaf();
+    private static final FlatDarkLaf FLAT_DARK_LAF;
+    private static final FlatLightLaf FLAT_LIGHT_LAF;
+    private static final FlatMacDarkLaf FLAT_MAC_DARK_LAF;
+    private static final FlatMacLightLaf FLAT_MAC_LIGHT_LAF;
+
+    private static <T extends FlatLaf> T patchTheme(T t) {
+        // Might use later
+        return t;
+    }
+
+    static {
+        // Setup themes
+        FLAT_DARK_LAF = patchTheme(new FlatDarkLaf());
+        FLAT_LIGHT_LAF = patchTheme(new FlatLightLaf());
+        FLAT_MAC_DARK_LAF = patchTheme(new FlatMacDarkLaf());
+        FLAT_MAC_LIGHT_LAF = patchTheme(new FlatMacLightLaf());
+    }
 
     private static boolean usingDark = false;
 

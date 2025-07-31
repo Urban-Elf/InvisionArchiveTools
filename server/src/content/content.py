@@ -16,9 +16,13 @@
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
 from .. import serializable
+from typing import TextIO
+import json
 from ..shared_constants import ContentType
+from ..worker.ic import IC
+from .converter import ContentConverter
 
-class Content(serializable.JSONSerializable):
+class Content(serializable.NDJSONSerializable):
     pass
     
 class Post(serializable.JSONSerializable):
@@ -28,6 +32,10 @@ class Post(serializable.JSONSerializable):
         self.link = link
         self.content = content
 
+    def convert_content(self, ic: IC):
+        """Convert the content of the post using ContentConverter."""
+        self.content = ContentConverter(self.content, ic).convert()
+
     def __serialize__(self) -> dict:
         return {
             "author": self.author,
@@ -36,17 +44,47 @@ class Post(serializable.JSONSerializable):
             "content": self.content
         }
     
+class UserData(serializable.JSONSerializable):
+    def __init__(self, profile_url: str, avatar_url: str):
+        self.profile_url: str = profile_url
+        self.avatar_url: str = avatar_url
+        self.group: str = ""
+        self.group_icon_url: str = ""
+
+    def set_group(self, group: str):
+        self.group = group
+        return self
+
+    def set_group_icon_url(self, group_icon_url: str):
+        self.group_icon_url = group_icon_url
+        return self
+
+    def __serialize__(self):
+        return {
+            "profile_url": self.profile_url,
+            "avatar_url": self.avatar_url,
+            "group": self.group,
+            "group_icon_url": self.group_icon_url
+        }
+
 class PostContent(Content):
     def __init__(self, title: str, type: ContentType):
         self.title = title
         self.type = type
-        self.avatar_map: dict[str, str] = {}
+        self.user_data: dict[str, UserData] = {}
         self.pages: list[list[Post]] = []
 
-    def __serialize__(self) -> dict:
+    def __serialize_metadata__(self) -> dict:
         return {
-            "title": self.title,
             "type": self.type.name,
-            "avatar_map": self.avatar_map,
-            "posts": [[post.__serialize__() for post in page] for page in self.pages]
+            "title": self.title,
+            "user_data": {name: self.user_data[name].__serialize__() for name in self.user_data},
         }
+
+    def __ndjson_write__(self, file_obj: TextIO):
+        # Metadata
+        file_obj.write(json.dumps(self.__serialize_metadata__()) + "\n")
+        # Content (page chunks)
+        for page in self.pages:
+            file_obj.write(json.dumps({"content":[post.__serialize__() for post in page]}) + "\n")
+            file_obj.flush()

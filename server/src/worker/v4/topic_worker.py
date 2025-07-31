@@ -22,7 +22,8 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
 from ...worker.ic_exceptions import ICWorkerException
 from ...worker.ic_chromedriver import IC_ChromeDriver
-from ...content.topic import Topic, TopicPost
+from ...content.content import Post, UserData
+from ...content.topic import Topic
 from ...content.writers import JSONWriter
 from ... import proto_model
 from ... import util
@@ -61,14 +62,14 @@ class TopicWorkerV4(IC4Worker):
 
             try:
                 self.driver_await(EC.presence_of_element_located((By.XPATH,
-                    "//div[@data-role=\"commentFeed\"]//article")), time=3)
+                    "//div[@id=\"comments\"]//div[@data-role=\"commentFeed\"]//article")), time=3)
                 # Valid session
                 break
             except TimeoutException:
                 self.set_state(TopicWorkerV4State.INVALID_TOPIC)
 
         clean_url = re.sub(r"/page/\d+.*$", "", self.driver.current_url)
-        util.log(util.LogLevel.INFO, clean_url)
+        #util.log(util.LogLevel.INFO, clean_url)
         self.driver.get(clean_url)
         try:
             self.driver_await(EC.url_contains(clean_url))
@@ -77,6 +78,10 @@ class TopicWorkerV4(IC4Worker):
 
         # Archive posts
         topic = self.archive_posts(self)
+
+        # Do not proceed with export if early shutdown occurs
+        if self.shutdown_event.is_set():
+            return
 
         # Export to temporary JSON file
         path = JSONWriter.write(topic)
@@ -87,7 +92,7 @@ class TopicWorkerV4(IC4Worker):
         
         self.set_state(SharedState.RESULT_AVAILABLE)
 
-        self.shutdown()
+        # Don't shutdown, as client will send shutdown command
 
     @staticmethod
     def archive_posts(worker: IC4Worker) -> Topic:
@@ -128,8 +133,8 @@ class TopicWorkerV4(IC4Worker):
                 worker.driver_await(EC.url_contains("/page/" + str(page)))
 
             # Comments feed
-            worker.driver_await(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-role=\"commentFeed\"]")))
-            comments_feed = worker.driver.find_element(By.CSS_SELECTOR, "div[data-role=\"commentFeed\"]")
+            worker.driver_await(EC.presence_of_element_located((By.XPATH, "//div[@id=\"comments\"]//div[@data-role=\"commentFeed\"]")))
+            comments_feed = worker.driver.find_element(By.XPATH, "//div[@id=\"comments\"]//div[@data-role=\"commentFeed\"]")
 
             worker.driver_await(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article")))
             articles = comments_feed.find_elements(By.CSS_SELECTOR, "article")
@@ -137,34 +142,43 @@ class TopicWorkerV4(IC4Worker):
             util.log(util.LogLevel.INFO, "Deconstructing articles (" + str(page) + "/" + str(final_page) + ")...")
 
             # Group posts by page (25/page by IC default)
-            page_posts: list[TopicPost] = []
+            page_posts: list[Post] = []
 
             for article in articles:
                 author = article.find_element(By.CSS_SELECTOR, "h3.cAuthorPane_author")
-                group = article.find_element(By.CSS_SELECTOR, "li[data-role=\"group\"]")
-                group_icon = article.find_element(By.XPATH, "//li[@data-role=\"group-icon\"]//img")
                 datetime = article.find_element(By.CSS_SELECTOR, "time")
                 content = article.find_element(By.CSS_SELECTOR, "div[data-role=\"commentContent\"]")
 
                 author_str: str = util.strip_tags(author.get_attribute("innerHTML"))
                 author_str = author_str.strip()
-                group_str = group.get_attribute("innerHTML").strip()
-                group_icon_str = "http:" + group_icon.get_attribute("src").strip()
-                datetime_str = datetime.get_attribute("title").strip()
+                datetime_str = datetime.get_attribute("datetime").strip()
                 content_str = content.get_attribute("innerHTML").strip()
 
                 comment_id = article.get_attribute("id").replace("elComment_", "")
                 link = page_url + str(page) + "#findComment-" + comment_id
 
-                post = TopicPost(author=author_str, group_raw=group_str, datetime=datetime_str, link=link, content=content_str)
+                # Post construct
+                post = Post(author=author_str, datetime=datetime_str, link=link, content=content_str)
+                # Crucial
+                post.convert_content(worker.ic)
+                # Add post to page
                 page_posts.append(post)
                 
-                if not author_str in topic.avatar_map:
-                    avatar = article.find_element(By.CSS_SELECTOR, f"img[alt=\"{author_str}\"]").get_attribute("src")
-                    topic.avatar_map[author_str] = avatar
-
-                if not post.get_group() in topic.group_icon_map:
-                    topic.group_icon_map[post.get_group()] = group_icon_str
+                # User data
+                if not author_str in topic.user_data:
+                    # Collect data
+                    profile_url = author.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                    avatar_url = article.find_element(By.CSS_SELECTOR, f"img[alt=\"{author_str}\"]").get_attribute("src")
+                    group = article.find_element(By.CSS_SELECTOR, "li[data-role=\"group\"]")
+                    group_icon = article.find_element(By.XPATH, "//li[@data-role=\"group-icon\"]//img")
+                    group_str = group.get_attribute("innerHTML").strip()
+                    group_icon_str = "http:" + group_icon.get_attribute("src").strip()
+                    # Create UD
+                    user_data = UserData(profile_url=profile_url, avatar_url=avatar_url)
+                    user_data.set_group(group_str)
+                    user_data.set_group_icon_url(group_icon_str)
+                    # Add to messenger construct
+                    topic.user_data[author_str] = user_data
 
             # Append page
             topic.pages.append(page_posts)
