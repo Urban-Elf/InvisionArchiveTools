@@ -22,9 +22,13 @@ package com.urbanelf.iat.util;
 import com.urbanelf.iat.Core;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
@@ -76,6 +80,24 @@ public class FileTree {
         walk.close();
     }
 
+    public static void copyDir(Path source, Path target) throws IOException {
+        Files.walkFileTree(source, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                Path targetDir = target.resolve(source.relativize(dir));
+                if (!Files.exists(targetDir)) {
+                    Files.createDirectories(targetDir);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.copy(file, target.resolve(source.relativize(file)), StandardCopyOption.REPLACE_EXISTING);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
     public static Path getRootPath() {
         return rootPath;
     }
@@ -86,5 +108,9 @@ public class FileTree {
 
     public static Path getServerPath() {
         return serverPath;
+    }
+
+    public static Path getExportPath() {
+        return exportPath;
     }
 }

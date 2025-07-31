@@ -35,16 +35,7 @@ dependencies {
     implementation 'com.formdev:flatlaf-intellij-themes:3.6'
     implementation 'org.seleniumhq.selenium:selenium-java:4.6.0'
     implementation 'org.json:json:20210307'
-    //implementation("org.graalvm.polyglot:polyglot:24.2.1")
-    //implementation("org.graalvm.polyglot:python:24.2.1")
-    //implementation 'com.github.Dansoftowner:jSystemThemeDetector:3.6'
-
-    /*implementation "org.lwjgl:lwjgl:3.3.1"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-windows"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-linux"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-macos"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-macos-arm64"*/
+    implementation 'org.thymeleaf:thymeleaf:3.1.3.RELEASE'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

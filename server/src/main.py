@@ -17,6 +17,7 @@
 
 import sys
 import uuid
+import threading
 from . import util
 from . import shared_constants
 from .worker import ic_worker
@@ -52,7 +53,8 @@ WORKER_VERSION_MAP = {
     },
 }
 
-ACTIVE_WORKERS = {}
+ACTIVE_WORKERS = dict()
+ACTIVE_WORKERS_LOCK = threading.Lock()
 
 def process_client_cmd():
     for line in sys.stdin:
@@ -80,10 +82,17 @@ def process_client_cmd():
                 proto_model.write_packet(proto_model.ServerPacket(worker_id=None, shared_action=proto_model.ServerSA.UUID_AVAILABLE)
                                  .add_data("uuid", _uuid))
                 _worker: ic_worker.ICWorker = WORKER_VERSION_MAP[shared_constants.WorkerType[packet.data["worker_type"]]][version](_uuid, _ic)
+                # Fixed value
+                static_uuid = _uuid
+                def _on_shutdown():
+                    with ACTIVE_WORKERS_LOCK:
+                        ACTIVE_WORKERS.pop(static_uuid, None)
+                    util.log(util.LogLevel.INFO, "Worker UUID " + static_uuid + " shutdown successfully.")
                 # Remove worker from active group on exit
-                _worker.on_shutdown = lambda: ACTIVE_WORKERS.pop(_uuid, None)
+                _worker.on_shutdown = _on_shutdown
                 # Add to active group
-                ACTIVE_WORKERS[_uuid] = _worker
+                with ACTIVE_WORKERS_LOCK:
+                    ACTIVE_WORKERS[_uuid] = _worker
                 # Start worker
                 _worker.start()
             elif packet.shared_action == proto_model.ClientSA.STATE_INPUT:
@@ -110,8 +119,9 @@ def process_client_cmd():
 def get_worker_by_uuid(uuid: str) -> ic_worker.ICWorker:
     if uuid == None:
         return None
-    if ACTIVE_WORKERS.__contains__(uuid):
-        return ACTIVE_WORKERS[uuid]
+    with ACTIVE_WORKERS_LOCK:
+        if ACTIVE_WORKERS.__contains__(uuid):
+            return ACTIVE_WORKERS[uuid]
     util.log(util.LogLevel.WARNING, "Attempted to access non-existent worker (uuid: " + str(uuid) + ")")
     return None
 

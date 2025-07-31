@@ -1,0 +1,111 @@
+blockquote > .ipsQuote_citation > a {
+  text-decoration: none !important;
+}
+
+blockquote.ipsQuote {
+  margin: .5em 0em 0em 0em;
+  padding: 1em;
+  background: var(--quote-content);
+  border-radius: 7px;
+  border: 4px solid rgba(29, 29, 29, .15);
+  border-top: 0px;
+  border-right: 0px;
+  border-bottom: 0px;
+  /*max-width: 700px;*/
+  position: relative;
+}
+
+.ipsQuote_citation {
+  background: var(--quote-citation);
+  margin: -1.22em -1.16em 0.15em -1.25em;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 7px;
+  padding: 0.9em 1em;
+  color: var(--text);
+  font-weight: bold;
+  font-size: 13px;
+  transition: outline-color 0.3s ease;
+}
+
+blockquote.ipsQuote_citation > a {
+  text-decoration: italic !important; /* Prevent link styling in quotes */
+}
+
+.ipsQuote_contents {
+  z-index: 10; /* establishes a stacking context */
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.ipsQuote > .ipsQuote_contents::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3em;
+    background: linear-gradient(to bottom, rgba(var(--quote-after-gradient), 0.01), rgba(var(--quote-after-gradient), 1));
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.ipsQuote[data-expanded='true'] > .ipsQuote_contents::after {
+    opacity: 0;
+}
+
+.ipsQuote[data-expandable='false'] > .ipsQuote_contents::after {
+    opacity: 0;
+}
+
+.expand-label {
+  display: block;
+  text-align: center;  /* Center the inline text */
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text);
+  cursor: pointer;
+  margin-top: 1em;
+}
+
+.expand-label.hidden {
+  display: none;
+  margin-top: 0em !important;
+}
+
+.ipsPos_right {
+  float: right;
+}
+
+.ipsQuote_citation .fa {
+  line-height: 23px;
+  opacity: 0.2;
+  transition: all 0.3s linear;
+}
+
+.ipsQuote_citation [data-action='toggleQuote'], .ipsSpoiler_header [data-action='toggleSpoiler'] {
+  vertical-align: middle;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900; /* Solid icons */
+  font-size: 15px;
+  margin-right: 0.5rem;
+  transition: opacity 0.2s ease-in-out;
+  display: inline-block;
+  line-height: 1;
+}
+
+.ipsQuote_citation:not(:hover) [data-action='toggleQuote'], .ipsSpoiler_header:not(:hover) [data-action='toggleSpoiler'] {
+  opacity: .3;
+}
+
+.ipsQuote[data-expanded="true"] [data-action='toggleQuote']:before {
+  content: "\f13a";
+}
+
+.ipsQuote[data-expanded="false"] [data-action='toggleQuote']:before {
+  content: "\f138";
+}
+
+.ipsQuote_citation .fa:hover {
+  opacity: 1;
+}

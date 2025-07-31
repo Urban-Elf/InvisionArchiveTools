@@ -16,8 +16,6 @@
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
 from .content import PostContent, Post
-from ..shared_constants import ContentType
-import re
 from .. import util
 
 class TopicPost(Post):
@@ -33,16 +31,6 @@ class TopicPost(Post):
         map["group_raw"] = self.group_raw
         return map
 
-class TopicPostContent(PostContent):
-    def __init__(self, title, type):
-        super().__init__(title, type)
-        self.group_icon_map: dict[str, str] = {}  # Maps group names to icon URLs
-
-    def __serialize__(self):
-        map = super().__serialize__()
-        map["group_icon_map"] = self.group_icon_map
-        return map
-
-class Topic(TopicPostContent):
+class Topic(PostContent):
     def __init__(self, title):
-        super().__init__(title, ContentType.TOPIC)
+        super().__init__(title)

@@ -19,11 +19,16 @@
 
 package com.urbanelf.iat.ic;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public final class IC4 extends IC {
     public IC4(String rootUrl) {
         super(rootUrl);
+    }
+
+    public IC4(JSONObject jsonObject) throws JSONException {
+        super(jsonObject.getString("root_url"));
     }
 
     @Override

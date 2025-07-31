@@ -18,3 +18,7 @@
 class JSONSerializable:
     def __serialize__(self) -> dict:
         raise NotImplementedError()
+
+class NDJSONSerializable:
+    def __ndjson_write__(self, file_obj) -> None:
+        raise NotImplementedError()

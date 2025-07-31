@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head></head>
+    <body>
+        <!-- Article partial -->
+        <article th:fragment="articleFragment(article, page, userData)" th:data-page="${page}">
+            <section class="post-meta">
+                <a th:href="${userData.profileUrl}" th:title="'Go to ' + ${article.author} + '\'s profile'">
+                    <img class="avatar" th:src="${userData.avatarUrl}">
+                </a>
+                <div class="post-info-container">
+                    <div class="post-info">
+                        <a class="post-author" th:href="${userData.profileUrl}" th:title="'Go to ' + ${article.author} + '\'s profile'">
+                            <strong th:text="${article.author}">Guest</strong>
+                        </a>
+                        <time th:datetime="${article.dateTime}" class="time-ago"></time>
+                    </div>
+                    <a class="post-link" th:href="@{${article.link}}"><i class="fa fa-share"></i></a>
+                </div>
+            </section>
+            <section class="post-content" th:utext="${article.content}">
+            </section>
+        </article>
+    </body>
+</html>

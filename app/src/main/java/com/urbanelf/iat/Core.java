@@ -19,6 +19,9 @@
 
 package com.urbanelf.iat;
 
+import com.urbanelf.iat.content.ArchiveFormat;
+import com.urbanelf.iat.content.parser.ContentSpec;
+import com.urbanelf.iat.content.writer.WriterDispatcher;
 import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.ui.MainFrame;
 import com.urbanelf.iat.ui.TOAFrame;
@@ -30,11 +33,15 @@ import com.urbanelf.iat.util.FileTree;
 import com.urbanelf.iat.util.LocalStorage;
 import com.urbanelf.iat.util.Logger;
 import com.urbanelf.iat.util.PlatformUtils;
+import com.urbanelf.iat.util.StringUtils;
 import com.urbanelf.iat.util.ThemeManager;
 import com.urbanelf.iat.util.function.QuadConsumer;
 import com.urbanelf.iat.util.function.TriConsumer;
 
 import java.awt.Desktop;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -49,11 +56,19 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import javafx.application.Platform;
@@ -76,6 +91,29 @@ public class Core {
     private static File logFile;
     private static File fatalLogFile;
     private static PrintStream logStream;
+
+    private static final JPanel exportArchivePanel;
+    private static final JComboBox<ArchiveFormat> archiveFileFormat;
+
+    static {
+        exportArchivePanel = new JPanel(new GridBagLayout());
+
+        final JPanel formatPanel = new JPanel();
+        formatPanel.setLayout(new BoxLayout(formatPanel, BoxLayout.X_AXIS));
+        archiveFileFormat = new JComboBox<>(ArchiveFormat.values());
+        formatPanel.add(new JLabel("File Format: "));
+        formatPanel.add(Box.createHorizontalStrut(4));
+        formatPanel.add(archiveFileFormat);
+
+        exportArchivePanel.add(formatPanel, new GridBagConstraints() {
+            {
+                this.gridx = 0;
+                this.gridy = 0;
+                this.weightx = 1;
+                this.fill = HORIZONTAL;
+            }
+        });
+    }
 
     private static boolean lockInstance(Path lockFilePath) {
         try {
@@ -102,6 +140,108 @@ public class Core {
             return true;
         } catch (IOException e) {
             return false;
+        }
+    }
+
+    public static void exportArchive(JFrame parent, ContentSpec spec) {
+        exportArchive(parent, spec, false);
+    }
+
+    public static void exportArchive(JFrame parent, ContentSpec spec, boolean destroyOnFinish) {
+        // Custom button labels
+        String[] options = {"Cancel", "OK"};
+
+        SwingUtilities.updateComponentTreeUI(exportArchivePanel);
+        exportArchivePanel.revalidate();
+        exportArchivePanel.repaint();
+
+        int result = JOptionPane.showOptionDialog(
+                parent,
+                exportArchivePanel,
+                "Export archive...",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options,
+                options[1]
+        );
+
+        if (result == 1) {
+            final CompletableFuture<Void> fxTask = new CompletableFuture<>();
+
+            Platform.runLater(() -> {
+                try {
+                    // Resolve format
+                    final ArchiveFormat format = (ArchiveFormat) Objects.requireNonNull(archiveFileFormat.getSelectedItem());
+                    // Resolve destination
+                    final File dst = Core.saveFile(StringUtils.cleanFileName(spec.content().getTitle()) + '.' + format.getExtension(),
+                            format.getExtensionFilter());
+                    if (dst == null) {
+                        final CompletableFuture<Void> exportCancelledTask = new CompletableFuture<>();
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(parent,
+                                    "Operation cancelled.",
+                                    "Export Archive...",
+                                    JOptionPane.INFORMATION_MESSAGE);
+                            exportCancelledTask.complete(null);
+                        });
+                        try {
+                            exportCancelledTask.get();
+                        } catch (Exception ex) {
+                        }
+                        Core.info(TAG, "Export canceled.");
+                        fxTask.complete(null);
+                        return;
+                    }
+                    final File outputDir;
+                    if (format == ArchiveFormat.JSON) {
+                        // Edge case: copy file (already stored as JSON)
+                        Files.copy(spec.file().toPath(), dst.toPath());
+                        outputDir = dst.getParentFile();
+                    } else {
+                        // Convert file
+                        outputDir = WriterDispatcher.write(spec, dst, format);
+                    }
+                    // Delete temp file
+                    spec.file().deleteOnExit();
+
+                    // Notify success
+                    SwingUtilities.invokeLater(() -> {
+                        Object[] options2 = {"Open Directory", "Close"};
+                        int result2 = JOptionPane.showOptionDialog(
+                                parent,
+                                "Archive exported successfully.",
+                                "Export Finished",
+                                JOptionPane.DEFAULT_OPTION,
+                                JOptionPane.INFORMATION_MESSAGE,
+                                null,
+                                options2,
+                                options2[1]
+                        );
+                        if (result2 == 0) {
+                            try {
+                                Desktop.getDesktop().open(outputDir);
+                            } catch (IOException e) {
+                                Core.error(TAG, "Failed to open output directory", e);
+                            }
+                        }
+                        // Destroy frame
+                        if (parent != null && destroyOnFinish)
+                            parent.dispatchEvent(new WindowEvent(parent, WindowEvent.WINDOW_CLOSING));
+                        fxTask.complete(null);
+                    });
+                } catch (Exception ex) {
+                    Core.fatal(TAG, "Failed to export archive", ex);
+                    fxTask.completeExceptionally(ex);
+                }
+            });
+
+            // Wait for JavaFX task to complete (blocks current thread)
+            try {
+                fxTask.get();
+            } catch (Exception ex) {
+                Core.error(TAG, "Error while waiting on FX export task", ex);
+            }
         }
     }
 
@@ -266,14 +406,14 @@ public class Core {
 
             SwingUtilities.invokeLater(() -> {
                 if (LocalStorage.getJsonObject().has(LS_AGREED_TO_TERMS)) {
-                    new MainFrame().setVisible(true);
+                    new MainFrame(); // Automatically shows
                 } else {
                     new TOAFrame() {
                         @Override
                         protected void result(boolean accepted) {
                             LocalStorage.getJsonObject().put(LS_AGREED_TO_TERMS, true);
                             LocalStorage.serialize();
-                            new MainFrame().setVisible(true);
+                            new MainFrame(); // Automatically shows
                         }
                     }.setVisible(true);
                 }
@@ -293,8 +433,9 @@ public class Core {
         return FILE_CHOOSER.showOpenDialog(null);
     }
 
-    public static File saveFile(FileChooser.ExtensionFilter... extensionFilters) {
+    public static File saveFile(String initialFileName, FileChooser.ExtensionFilter... extensionFilters) {
         FILE_CHOOSER.setTitle("");//"Save File");
+        FILE_CHOOSER.setInitialFileName(initialFileName);
         FILE_CHOOSER.getExtensionFilters().clear();
         FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
         FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));

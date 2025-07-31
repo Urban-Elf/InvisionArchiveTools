@@ -1,0 +1,166 @@
+pre.ipsCode {
+    margin: .5em 0em 0em 0em;
+    padding: 1em;
+    background: var(--quote-content);
+    border-radius: 7px;
+    border: 4px solid rgba(29, 29, 29, .15);
+    border-top: 0px;
+    border-right: 0px;
+    border-bottom: 0px;
+    position: relative;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.pln {
+    color: #000
+}
+
+@media screen {
+    .str {
+        color: #080
+    }
+
+    .kwd {
+        color: #008
+    }
+
+    .com {
+        color: #800
+    }
+
+    .typ {
+        color: #606
+    }
+
+    .lit {
+        color: #066
+    }
+
+    .pun,.opn,.clo {
+        color: #660
+    }
+
+    .tag {
+        color: #008
+    }
+
+    .atn {
+        color: #606
+    }
+
+    .atv {
+        color: #080
+    }
+
+    .dec,.var {
+        color: #606
+    }
+
+    .fun {
+        color: red
+    }
+}
+
+@media print,projection {
+    .str {
+        color: #060
+    }
+
+    .kwd {
+        color: #006;
+        font-weight: bold
+    }
+
+    .com {
+        color: #600;
+        font-style: italic
+    }
+
+    .typ {
+        color: #404;
+        font-weight: bold
+    }
+
+    .lit {
+        color: #044
+    }
+
+    .pun,.opn,.clo {
+        color: #440
+    }
+
+    .tag {
+        color: #006;
+        font-weight: bold
+    }
+
+    .atn {
+        color: #404
+    }
+
+    .atv {
+        color: #060
+    }
+}
+
+[data-theme="dark"] .com {
+    color: #ff7e7e;
+}
+
+[data-theme="dark"] .str {
+    color: #69b769;
+}
+
+[data-theme="dark"] .kwd {
+    color: #64b7ff;
+}
+
+[data-theme="dark"] .pun, [data-theme="dark"] .opn, [data-theme="dark"] .clo {
+    color: #b3b350;
+}
+
+[data-theme="dark"] .pln {
+    color: #efefef;
+}
+
+[data-theme="dark"] .typ {
+    color: #ff9dff;
+}
+
+[data-theme="dark"] .lit {
+    color: #2fbbbb;
+}
+
+[data-theme="dark"] .tag {
+    color: #aeaeff;
+}
+
+[data-theme="dark"] .atn {
+    color: #ff90ff;
+}
+
+[data-theme="dark"] .atv {
+    color: #83bd83;
+}
+
+/* Scrollbar Track */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+/* Scrollbar Thumb */
+::-webkit-scrollbar-thumb {
+	background-color: #2F96E0;
+}
+
+/* Scrollbar Thumb on Hover */
+::-webkit-scrollbar-thumb:hover {
+	background-color: #1e75b3;
+}
+
+/* Optional: Scrollbar Track Background */
+::-webkit-scrollbar-track {
+	background: rgba(0, 0, 0, 0.05);
+}

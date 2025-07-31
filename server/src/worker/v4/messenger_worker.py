@@ -20,7 +20,7 @@ from ...worker.state.worker_state import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
-from ...content.content import Post
+from ...content.content import Post, UserData
 from ...content.messenger import Messenger
 from ...content.writers import JSONWriter
 from ... import proto_model
@@ -59,11 +59,20 @@ class MessengerWorkerV4(IC4Worker):
 
             try:
                 self.driver_await(EC.presence_of_element_located((By.XPATH,
-                    "//div[@data-role=\"commentFeed\"]//article")), time=3)
+                    "//div[@id=\"elMessageViewer\"]//div[@data-role=\"commentFeed\"]//article")), time=3)
                 # Valid session
                 break
             except TimeoutException:
                 self.set_state(MessengerWorkerV4State.INVALID_MESSENGER)
+
+        # Clean url
+        clean_url = re.sub(r"\?page=\d+.*$", "", self.driver.current_url)
+        #util.log(util.LogLevel.INFO, clean_url)
+        self.driver.get(clean_url)
+        try:
+            self.driver_await(EC.url_contains(clean_url))
+        except TimeoutException:
+            pass
 
         # Archive posts
         messenger = self.archive_posts()
@@ -76,6 +85,10 @@ class MessengerWorkerV4(IC4Worker):
         #    util.log(util.LogLevel.INFO, f"{key}: {messenger.avatar_map[key]}")
         ######################################
 
+        # Do not proceed with export if early shutdown occurs
+        if self.shutdown_event.is_set():
+            return
+
         # Export to temporary JSON file
         path = JSONWriter.write(messenger)
 
@@ -85,7 +98,7 @@ class MessengerWorkerV4(IC4Worker):
         
         self.set_state(SharedState.RESULT_AVAILABLE)
 
-        self.shutdown()
+        # Don't shutdown, as client will send shutdown command
 
     def archive_posts(self):
         # Preparation
@@ -106,7 +119,34 @@ class MessengerWorkerV4(IC4Worker):
         # Archive
         self.set_state(MessengerWorkerV4State.ARCHIVING)
 
-        messenger = Messenger()
+        # Get messenger title
+        title_str = "Invision Community Messenger"
+        try:
+            title = self.driver.find_element(By.XPATH, "//div[@id=\"elMessageViewer\"]//div[contains(@class, \"ipsPageHeader\")]//h1[contains(@class, \"ipsType_pageTitle\")]")
+            title_str = util.strip_tags(title.get_attribute("innerHTML")).strip()
+        except NoSuchElementException:
+            util.log(util.LogLevel.WARNING, "Failed to find topic title, using default.")
+            pass
+
+        messenger = Messenger(title=title_str)
+
+        # Extract userdata
+        userdata_from_posts = False
+        try: 
+            members_container = self.driver.find_element(By.XPATH, "//div[@id=\"elMessageViewer\"]//div[contains(@class, \"cMessage_members\")]")
+            members = members_container.find_elements(By.XPATH, "//ol//li[contains(@class, \"ipsPhotoPanel\")]")
+            for member in members:
+                profile_url = member.find_element(By.XPATH, ".//a").get_attribute("href")
+                avatar = member.find_element(By.XPATH, ".//a//img")
+                author_str = avatar.get_attribute("alt").strip()
+                avatar_url = avatar.get_attribute("src").strip()
+                user_data = UserData(profile_url=profile_url, avatar_url=avatar_url)
+                # Add to messenger construct
+                messenger.user_data[author_str] = user_data
+        except NoSuchElementException:
+            # No members section, try to extract from posts
+            util.log(util.LogLevel.WARNING, "No members section found, extracting user data from posts.")
+            userdata_from_posts = True
 
         while not self.shutdown_event.is_set():
             next_page_url = page_url + str(page) + "/"
@@ -116,8 +156,8 @@ class MessengerWorkerV4(IC4Worker):
                 self.driver_await(EC.url_contains("?page=" + str(page)))
 
             # Comments feed
-            self.driver_await(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-role=\"commentFeed\"]")))
-            comments_feed = self.driver.find_element(By.CSS_SELECTOR, "div[data-role=\"commentFeed\"]")
+            self.driver_await(EC.presence_of_element_located((By.XPATH, "//div[@id=\"elMessageViewer\"]//div[@data-role=\"commentFeed\"]")))
+            comments_feed = self.driver.find_element(By.XPATH, "//div[@id=\"elMessageViewer\"]//div[@data-role=\"commentFeed\"]")
 
             self.driver_await(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article")))
             articles = comments_feed.find_elements(By.CSS_SELECTOR, "article")
@@ -134,17 +174,26 @@ class MessengerWorkerV4(IC4Worker):
 
                 author_str: str = util.strip_tags(author.get_attribute("innerHTML"))
                 author_str = author_str.strip()
-                datetime_str = datetime.get_attribute("title").strip()
+                datetime_str = datetime.get_attribute("datetime").strip()
                 content_str = content.get_attribute("innerHTML").strip()
 
                 comment_id = article.get_attribute("id").replace("elComment_", "")
                 link = page_url + str(page) + "#findComment-" + comment_id
 
-                page_posts.append(Post(author=author_str, datetime=datetime_str, link=link, content=content_str))
+                # Post construct
+                post = Post(author=author_str, datetime=datetime_str, link=link, content=content_str)
+                # Crucial
+                post.convert_content(self.ic)
+                # Add post to page
+                page_posts.append(post)
                 
-                if not author_str in messenger.avatar_map:
-                    avatar = article.find_element(By.CSS_SELECTOR, f"img[alt=\"{author_str}\"]").get_attribute("src")
-                    messenger.avatar_map[author_str] = avatar
+                # User data (if not already in members section)
+                if userdata_from_posts and not author_str in messenger.user_data:
+                    profile_url = author.find_element(By.XPATH, "//a[img]").get_attribute("href")
+                    avatar_url = article.find_element(By.CSS_SELECTOR, f"img[alt=\"{author_str}\"]").get_attribute("src")
+                    user_data = UserData(profile_url=profile_url, avatar_url=avatar_url)
+                    # Add to messenger construct
+                    messenger.user_data[author_str] = user_data
 
             # Append page
             messenger.pages.append(page_posts)
