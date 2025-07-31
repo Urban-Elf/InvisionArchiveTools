@@ -53,6 +53,8 @@ public class JLinkLabel extends JLabel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                if (!isEnabled() || e.getButton() != MouseEvent.BUTTON1)
+                    return;
                 if (uri != null && Desktop.isDesktopSupported()) {
                     try {
                         Desktop.getDesktop().browse(uri);

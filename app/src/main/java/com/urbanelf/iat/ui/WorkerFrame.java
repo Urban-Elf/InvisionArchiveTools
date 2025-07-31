@@ -20,6 +20,10 @@
 package com.urbanelf.iat.ui;
 
 import com.urbanelf.iat.Core;
+import com.urbanelf.iat.content.ArchiveFormat;
+import com.urbanelf.iat.content.parser.ContentSpec;
+import com.urbanelf.iat.content.parser.ParserDispatcher;
+import com.urbanelf.iat.content.writer.WriterDispatcher;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.state.ICWorkerState;
 import com.urbanelf.iat.proto.ClientPacket;
@@ -28,6 +32,7 @@ import com.urbanelf.iat.proto.ServerPacket;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
 import com.urbanelf.iat.util.PlatformUtils;
+import com.urbanelf.iat.util.StringUtils;
 
 import org.json.JSONObject;
 
@@ -42,17 +47,26 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.file.Files;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
+
+import javafx.application.Platform;
+import javafx.stage.FileChooser;
 
 public class WorkerFrame extends JFrame {
     private static final String TAG = WorkerFrame.class.getSimpleName();
@@ -61,6 +75,7 @@ public class WorkerFrame extends JFrame {
     private final WorkerType workerType;
     private final PythonServer.ServerListener serverListener;
     private String workerId;
+    private ContentSpec contentSpec;
 
     private final JPanel statePanelWrapper;
     private final JPanel progressiveStatePanel;
@@ -104,11 +119,12 @@ public class WorkerFrame extends JFrame {
                                 default -> auxLink = "";
                             }
 
-                            final String generalText = "IAT failed to start chromedriver.\n"
-                                    + "Please verify you have Chrome installed on your machine, and try again.\n\n"
-                                    + "Download at: " + link + "\n\n"
-                                    + (auxLink.isEmpty() ? "" : "If the issue persists, try downloading it instead from:\n\n"
-                                    + auxLink + "\n");
+                            final String generalText = "IAT failed to start chromedriver.\n\n"
+                                    + " - Please verify you have Chrome installed on your machine, and try again.\n"
+                                    + "   Download at: " + link + "\n"
+                                    + (auxLink.isEmpty() ? "" : "   If the issue persists, try downloading an older version"
+                                    + "   instead from:\n" + auxLink + "\n")
+                                    + " - Contact the developer (Help → Report Bug)";
 
                             // Determine exception
                             final String text;
@@ -169,6 +185,9 @@ public class WorkerFrame extends JFrame {
                             SwingUtilities.invokeLater(() -> stateProgress.setValue((int) (object.floatValue() * stateProgress.getMaximum())));
                         }
                         case RESULT_AVAILABLE -> {
+                            final String path = (String) packet.getData().get("path");
+                            // Dispatch parser and store ContentSpec
+                            contentSpec = ParserDispatcher.process(new File(path));
                         }
                     }
                 } catch (Exception e) {
@@ -236,19 +255,12 @@ public class WorkerFrame extends JFrame {
 
         setContentPane(panelWrapper);
 
-        //pack();
-
         /////////////////////////////////////////////////////////////
 
         // Start worker
         PythonServer.writePacket(new ClientPacket(ClientSA.DISPATCH_WORKER)
                 .addData("ic", ic.toJson())
                 .addData("worker_type", workerType));
-
-        //stateNote.setText("Please sign in to continue.");
-        //stateProgress.setIndeterminate(true);
-        //layoutSelectiveStatePanel(ICWorkerState.AUTH_REQUIRED);
-        //statePanelWrapper.add(selectiveStatePanel);
     }
 
     public void updateComponentTreeUI() {
@@ -278,6 +290,8 @@ public class WorkerFrame extends JFrame {
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent mouseEvent) {
+                    if (!button.isEnabled() || mouseEvent.getButton() != MouseEvent.BUTTON1)
+                        return;
                     switch (config.sharedAction()) {
                         case OPEN_LOG -> {
                             try {
@@ -287,6 +301,7 @@ public class WorkerFrame extends JFrame {
                             }
                         }
                         case EXPORT_ARCHIVE -> {
+                            Core.exportArchive(WorkerFrame.this, contentSpec, true);
                         }
                         case TERMINATE -> {
                             // Destroy frame

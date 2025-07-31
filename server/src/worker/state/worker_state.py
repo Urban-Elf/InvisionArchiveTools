@@ -61,9 +61,9 @@ class SharedState:
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
                                        hint="Please notify the developer (Help → Report Bug)",
                                        button_configs=[
-                                           ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE),
-                                           ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG)])
+                                           ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG),
+                                           ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)])
     ATTEMPTING_RECONNECT = ICWorkerState(note="Connecting...")
-    RESULT_AVAILABLE = ICWorkerState(note="Task finished successfully.",
+    RESULT_AVAILABLE = ICWorkerState(note="Operation completed successfully.",
                                      hint="Press the button to save the archive.",
-                                     button_configs=[ButtonConfig("Export Archive...", shared_action=shared_constants.ButtonCallbackSA.EXPORT_ARCHIVE),])
+                                     button_configs=[ButtonConfig("Export...", shared_action=shared_constants.ButtonCallbackSA.EXPORT_ARCHIVE),])

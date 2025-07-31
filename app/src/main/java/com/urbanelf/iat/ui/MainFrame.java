@@ -21,6 +21,9 @@ package com.urbanelf.iat.ui;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.urbanelf.iat.Core;
+import com.urbanelf.iat.Version;
+import com.urbanelf.iat.content.parser.ContentSpec;
+import com.urbanelf.iat.content.parser.ParserDispatcher;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.IC4;
 import com.urbanelf.iat.ic.IC5;
@@ -34,7 +37,9 @@ import com.urbanelf.iat.util.ThemeManager;
 import com.urbanelf.iat.util.UIUtils;
 import com.urbanelf.iat.util.URLUtils;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.openqa.selenium.remote.http.Contents;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -45,16 +50,29 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -77,6 +95,8 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -87,6 +107,7 @@ public class MainFrame extends JFrame {
     private static final String TAG = MainFrame.class.getSimpleName();
 
     private static final String LS_COMMUNITY_URLS = "community_urls";
+    private static final String LS_CURRENT_URL = "current_url";
 
     private static final Dimension ICON_BUTTON_SIZE = new Dimension(28, 28);
 
@@ -134,6 +155,8 @@ public class MainFrame extends JFrame {
             final IC ic = (IC) currentCommunity.getSelectedItem();
             if (ic != null)
                 currentIc = ic;
+            LocalStorage.getJsonObject().put(LS_CURRENT_URL, currentIc.toJson());
+            LocalStorage.serialize();
         });
         workerButtons = new ArrayList<>();
 
@@ -160,19 +183,33 @@ public class MainFrame extends JFrame {
 
         // Deserialize persistent data
         try {
+            // LS_CURRENT_URL
+            final AtomicReference<String> serialCurrentRootUrl = new AtomicReference<>();
+            try {
+                serialCurrentRootUrl.set(LocalStorage.getJsonObject().getJSONObject(LS_CURRENT_URL).getString("root_url"));
+            } catch (JSONException e) {
+                Core.info(TAG,  "LS_CURRENT_URL not found/invalid in LocalStorage map");
+            }
+
+            final AtomicReference<IC> serialCurrentIc = new AtomicReference<>();
             LocalStorage.getJsonObject().getJSONArray(LS_COMMUNITY_URLS).forEach(object -> {
                 try {
                     if (object instanceof JSONObject jsonObject) {
                         // Ignore malformed URLs
                         if (jsonObject.get("url") instanceof String url && URLUtils.isURLHTTP(url)) {
-                            communityListModel.addElement(Objects.requireNonNull(Version.ofInteger((int) jsonObject.get("version"))).getIcClass()
-                                    .getDeclaredConstructor(String.class).newInstance(URLUtils.normalizeURLString(url)));
+                            final IC ic = Objects.requireNonNull(Version.ofInteger((int) jsonObject.get("version"))).getIcClass()
+                                    .getDeclaredConstructor(String.class).newInstance(URLUtils.normalizeURLString(url));
+                            if (ic.getRootUrl().equals(serialCurrentRootUrl.get()))
+                                serialCurrentIc.set(ic);
+                            communityListModel.addElement(ic);
                         }
                     }
                 } catch (Exception e) {
                     Core.error(TAG, "Error while attempting to restore persistent data", e);
                 }
             });
+            if (serialCurrentIc.get() != null)
+                currentCommunity.setSelectedItem(serialCurrentIc.get());
         } catch (Exception e) {
             Core.error(TAG, "Error while attempting to restore persistent data", e);
         }
@@ -208,6 +245,98 @@ public class MainFrame extends JFrame {
                 return jsonArray;
             }
         });
+
+        // Set visible
+        setVisible(true);
+
+        new Timer(300, e -> {
+            // Handle unexported archives
+            try {
+                final Stream<Path> walk = Files.walk(FileTree.getExportPath())
+                        .filter(p -> p.getFileName().toString().endsWith(".json"))
+                        .sorted(Comparator.reverseOrder()); // most recent first
+                final Iterator<Path> iterator = walk.iterator();
+
+                Runnable processNext = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!iterator.hasNext()) {
+                            walk.close();
+                            return;
+                        }
+
+                        final Runnable runnableThis = this;
+                        final Path p = iterator.next();
+                        Core.warning(TAG, "Found unexported archive '" + p.getFileName().toString() + "'");
+
+                        Object[] options = {"Recover", "Discard"};
+                        int result = JOptionPane.showOptionDialog(
+                                MainFrame.this,
+                                "An unexported archive was detected, do you want to recover it?",
+                                "Recovery",
+                                JOptionPane.DEFAULT_OPTION,
+                                JOptionPane.INFORMATION_MESSAGE,
+                                null,
+                                options,
+                                options[0]);
+                        if (result == 0) {
+                            // Background recovery
+                            new SwingWorker<Void, Void>() {
+                                private boolean continueOnDone = false;
+
+                                @Override
+                                protected Void doInBackground() {
+                                    ContentSpec spec = null;
+                                    try {
+                                        spec = ParserDispatcher.process(p.toFile());
+                                    } catch (IOException | JSONException e2) {
+                                        SwingUtilities.invokeLater(() -> {
+                                            JOptionPane.showMessageDialog(MainFrame.this,
+                                                    "Corrupt or invalid archive file: \n\n"
+                                                            + p.getFileName().toString(),
+                                                    "An error occurred",
+                                                    JOptionPane.WARNING_MESSAGE);
+                                        });
+                                        Core.error(TAG, "Error parsing archive '" + p.getFileName().toString() + "'", e2);
+                                        // Delete file
+                                        try {
+                                            Files.deleteIfExists(p);
+                                        } catch (IOException e3) {
+                                            Core.error(TAG, "Failed to delete archive '" + p.getFileName().toString() + "'", e3);
+                                        }
+                                        continueOnDone = true;
+                                    }
+                                    if (spec != null) {
+                                        Core.exportArchive(MainFrame.this, spec);
+                                        SwingUtilities.invokeLater(runnableThis); // continue loop
+                                    }
+                                    return null;
+                                }
+
+                                @Override
+                                protected void done() {
+                                    if (continueOnDone)
+                                        SwingUtilities.invokeLater(runnableThis); // continue loop
+                                }
+                            }.execute();
+                            return;
+                        } else if (result == 1) {
+                            try {
+                                Files.deleteIfExists(p);
+                            } catch (IOException e2) {
+                                Core.error(TAG, "Failed to delete archive '" + p.getFileName().toString() + "'", e2);
+                            }
+                        }
+                        SwingUtilities.invokeLater(runnableThis); // continue loop
+                    }
+                };
+
+                processNext.run(); // Start the loop
+            } catch (IOException e2) {
+                Core.error(TAG, "An error occurred while attempting to traverse export path", e2);
+            }
+            ((Timer) e.getSource()).stop();
+        }).start();
     }
 
     private JMenuBar createMenuBar() {
@@ -460,6 +589,7 @@ public class MainFrame extends JFrame {
                 <br><br>
                   - "envelope-solid.svg": FontAwesome<br>
                   - "comment-solid.svg": FontAwesome<br>
+                  - "camera-solid-full-scaled.svg": FontAwesome<br>
                   - "comments-solid-scaled.svg": FontAwesome<br>
                   - "book-open-reader-solid.svg": FontAwesome<br>
                   - "plus-solid.svg": FontAwesome<br>
@@ -501,7 +631,12 @@ public class MainFrame extends JFrame {
 
     public void refreshIcons() {
         managedIcons.forEach(icon -> {
-            final Color lafTextColor = UIManager.getColor("Button.foreground");
+            final Color lafTextColor;
+            if (ThemeManager.isDark()) {
+                lafTextColor = UIManager.getColor("Button.foreground");
+            } else {
+                lafTextColor = Color.DARK_GRAY;
+            }
             icon.setColorFilter(new FlatSVGIcon.ColorFilter(c -> lafTextColor));
         });
         starOnGitHub.setIcon(ThemeManager.isDark() ? githubMarkWhite : githubMark);
@@ -529,6 +664,8 @@ public class MainFrame extends JFrame {
                 iconButton.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent mouseEvent) {
+                        if (!iconButton.isEnabled() || mouseEvent.getButton() != MouseEvent.BUTTON1)
+                            return;
                         ThemeManager.toggleTheme(MainFrame.this::refreshIcons);
                         if (currentWorker != null)
                             currentWorker.updateComponentTreeUI();
@@ -564,11 +701,11 @@ public class MainFrame extends JFrame {
         final Component messengerButton = createContentButton(WorkerType.MESSENGER_WORKER, "Messenger", "Private conversations among community members.",
                 "icons/envelope-solid.svg");
         final Component topicButton = createContentButton(WorkerType.TOPIC_WORKER, "Topic", "Public discussion threads within a forum.",
-                "icons/comment-solid.svg");
-        final Component forumButton = createContentButton(WorkerType.FORUM_WORKER, "Forum", "Organized collections of topics.",
-                "icons/comments-solid-scaled.svg");
-        final Component blogButton = createContentButton(WorkerType.BLOG_WORKER, "Blog", "Public articles by individuals or groups.",
-                "icons/book-open-reader-solid.svg");
+                "icons/comment-solid.svg", true);
+        final Component forumButton = createContentButton(WorkerType.FORUM_WORKER, "Gallery Image", "User-submitted images of various subjects.", //Organized collections of topics.
+                "icons/camera-solid-full-scaled.svg", true);
+        final Component blogButton = createContentButton(WorkerType.BLOG_WORKER, "Blog Entry", "Public articles by individuals or groups.",
+                "icons/book-open-reader-solid.svg", true);
 
         final int inset = PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Mac ? 4 : 8;
 
@@ -633,10 +770,7 @@ public class MainFrame extends JFrame {
 
             private void updateButtonStates() {
                 final boolean enabled = !communityListModel.isEmpty();
-                messengerButton.setEnabled(enabled);
-                topicButton.setEnabled(enabled);
-                forumButton.setEnabled(enabled);
-                blogButton.setEnabled(enabled);
+                workerButtons.forEach(button -> button.setEnabled(enabled));
             }
         });
 
@@ -653,6 +787,10 @@ public class MainFrame extends JFrame {
     }
 
     private JButton createContentButton(WorkerType type, String name, String description, String icon) {
+        return createContentButton(type, name, description, icon, false);
+    }
+
+    private JButton createContentButton(WorkerType type, String name, String description, String icon, boolean wip) {
         final JButton button = new JButton("<html><b>" + name + "</b><br>" + description + "</html>");
         UIUtils.minWidth(button, 500);
         //UIUtils.prefWidth(button, 350);
@@ -660,15 +798,31 @@ public class MainFrame extends JFrame {
         final FlatSVGIcon messengerIcon = new FlatSVGIcon(icon, 36, 36);
         managedIcons.add(messengerIcon);
         button.setIcon(messengerIcon);
-        button.setIconTextGap(18);
+        button.setIconTextGap(15);
         button.setHorizontalAlignment(JButton.LEFT);
         // Add to managed buttons
         workerButtons.add(button);
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent mouseEvent) {
-                if (!button.isEnabled())
+                if (!button.isEnabled() || mouseEvent.getButton() != MouseEvent.BUTTON1) {
                     return;
+                } else if (wip) {
+                    Object[] options2 = {"OK"};
+                    JOptionPane.showOptionDialog(
+                            MainFrame.this,
+                            "This content type is currently in development, but not yet supported.\n\n"
+                                + "Updates will be available on the GitHub repo (Help → About).\n"
+                                + "Thank you for your patience!",
+                            "Work in progress",
+                            JOptionPane.DEFAULT_OPTION,
+                            JOptionPane.INFORMATION_MESSAGE,
+                            null,
+                            options2,
+                            options2[0]
+                    );
+                    return;
+                }
                 setCurrentWorker(new WorkerFrame(currentIc, type) {
                     {
                         addWindowListener(new WindowAdapter() {
@@ -766,7 +920,46 @@ public class MainFrame extends JFrame {
         final JComboBox<Version> version = new JComboBox<>(Version.values());
         version.setSelectedItem(Version.v4);
 
+        // Track the previous selection
+        final Version[] lastSelected = { (Version) version.getSelectedItem() };
+
+        version.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                final Version selected = (Version) e.getItem();
+
+                if (Version.v5.equals(selected)) {
+                    JOptionPane.showMessageDialog(MainFrame.this,
+                            "Support for Invision Community v5.0 is in consideration, but\n"
+                            + "has not yet been implemented.\n\n"
+                            + "IC v4.0 might be compatible with it, though it is untested,\n"
+                            + "so use at your own risk.",
+                            "Not supported",
+                            JOptionPane.INFORMATION_MESSAGE);
+
+                    // Revert to last valid selection
+                    version.setSelectedItem(lastSelected[0]);
+                } else {
+                    lastSelected[0] = selected; // Update last valid selection
+                }
+            }
+        });
+
+        final Function<IC, Boolean> hasDuplicates = ic -> {
+            // Search for duplicates
+            for (int i = 0; i < communityListModel.getSize(); i++) {
+                Object item = communityListModel.getElementAt(i);
+                if (ic.toString().equals(item.toString())) {
+                    // Do not submit if duplicate is found
+                    return true;
+                }
+            }
+            return false;
+        };
+
         final Consumer<String> addElementConsumer = url -> {
+            // EOCs
+            if (url.isBlank() || !URLUtils.isURLHTTP(url))
+                return;
             IC ic;
             try {
                 ic = ((Version) Objects.requireNonNull(version.getSelectedItem())).getIcClass()
@@ -775,6 +968,11 @@ public class MainFrame extends JFrame {
                 Core.error(TAG, "Failed to construct IC", e);
                 return;
             }
+
+            // Prevent duplicates
+            if (hasDuplicates.apply(ic))
+                return;
+
             communityListModel.addElement(ic);
             field.setText("");
             errorLabel.setVisible(false);
@@ -805,16 +1003,14 @@ public class MainFrame extends JFrame {
         field.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent keyEvent) {
-                if (keyEvent.getKeyCode() == KeyEvent.VK_ENTER && !field.getText().isBlank()
-                    && URLUtils.isURLHTTP(field.getText())) {
+                if (keyEvent.getKeyCode() == KeyEvent.VK_ENTER)
                     addElementConsumer.accept(field.getText());
-                }
             }
         });
         addButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent mouseEvent) {
-                if (!addButton.isEnabled() || field.getText().isBlank() || !URLUtils.isURLHTTP(field.getText()))
+                if (!addButton.isEnabled() || mouseEvent.getButton() != MouseEvent.BUTTON1)
                     return;
                 addElementConsumer.accept(field.getText());
             }
@@ -824,7 +1020,7 @@ public class MainFrame extends JFrame {
         removeButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent mouseEvent) {
-                if (!removeButton.isEnabled())
+                if (!removeButton.isEnabled() || mouseEvent.getButton() != MouseEvent.BUTTON1)
                     return;
                 list.getSelectedValuesList().forEach(communityListModel::removeElement);
             }
@@ -944,6 +1140,8 @@ public class MainFrame extends JFrame {
 
             @Override
             public void mouseClicked(MouseEvent mouseEvent) {
+                if (!button.isEnabled() || mouseEvent.getButton() != MouseEvent.BUTTON1)
+                    return;
                 index++;
                 index = index % icons.length;
                 button.setIcon(icons[index]);

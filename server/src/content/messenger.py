@@ -19,5 +19,5 @@ from .content import PostContent
 from ..shared_constants import ContentType
 
 class Messenger(PostContent):
-    def __init__(self):
-        super().__init__(ContentType.MESSENGER)
+    def __init__(self, title):
+        super().__init__(title, ContentType.MESSENGER)

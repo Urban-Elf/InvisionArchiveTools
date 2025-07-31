@@ -44,4 +44,15 @@ public class StringUtils {
         }
         return builder.toString();
     }
+
+    public static String cleanFileName(String fileName) {
+        if (fileName == null) return "";
+        String cleaned = fileName.replaceAll("[\\\\/:*?\"<>|]", "");
+        cleaned = cleaned.trim().replaceAll("^[.\\s]+|[.\\s]+$", "");
+        return cleaned;
+    }
+
+    public static String removeExtension(String fileName) {
+        return fileName.replaceAll("\\.[^.]+$", "");
+    }
 }

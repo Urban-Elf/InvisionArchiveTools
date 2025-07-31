@@ -17,19 +17,33 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.content;
+package com.urbanelf.iat.content.struct;
+
+import org.json.JSONObject;
 
 public class Post {
     private final String author;
+    private final String dateTime;
+    private final String link;
     private final String content;
 
-    public Post(String author, String content) {
-        this.author = author;
-        this.content = content;
+    public Post(JSONObject jsonObject) {
+        this.author = jsonObject.getString("author");
+        this.dateTime = jsonObject.getString("datetime");
+        this.link = jsonObject.getString("link");
+        this.content = jsonObject.getString("content");
     }
 
     public String getAuthor() {
         return author;
+    }
+
+    public String getDateTime() {
+        return dateTime;
+    }
+
+    public String getLink() {
+        return link;
     }
 
     public String getContent() {

@@ -26,6 +26,10 @@ class IC:
     def messenger(self):
         """Returns a URL to the messenger app on the community."""
         raise NotImplementedError()
+    
+    def profile(self, user_id: str):
+        """Returns a URL to the profile page for the given user ID."""
+        raise NotImplementedError()
 
     def get_version_number(self):
         raise NotImplementedError()
@@ -51,6 +55,9 @@ class IC4(IC):
     
     def messenger(self):
         return self.messenger_url
+    
+    def profile(self, user_id: str, username: str):
+        return f"{self.root_url}/profile/{user_id}-{username.lower()}"
 
     def get_version_number(self):
         return 4
@@ -66,6 +73,9 @@ class IC5(IC):
     
     def messenger(self):
         return self.messenger_url
+    
+    def profile(self, user_id, username):
+        return f"{self.root_url}/profile/{user_id}-{username}"
 
     def get_version_number(self):
         return 5

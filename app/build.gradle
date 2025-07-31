@@ -35,16 +35,7 @@ dependencies {
     implementation 'com.formdev:flatlaf-intellij-themes:3.6'
     implementation 'org.seleniumhq.selenium:selenium-java:4.6.0'
     implementation 'org.json:json:20210307'
-    //implementation("org.graalvm.polyglot:polyglot:24.2.1")
-    //implementation("org.graalvm.polyglot:python:24.2.1")
-    //implementation 'com.github.Dansoftowner:jSystemThemeDetector:3.6'
-
-    /*implementation "org.lwjgl:lwjgl:3.3.1"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-windows"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-linux"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-macos"
-    implementation "org.lwjgl:lwjgl-nfd:3.3.1:natives-macos-arm64"*/
+    implementation 'org.thymeleaf:thymeleaf:3.1.3.RELEASE'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -97,3 +88,65 @@ compileJava.dependsOn generateVersion
 
 // Include generated sources in the compilation
 sourceSets.main.java.srcDir generatedDir
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': application.mainClass.get()
+        )
+    }
+}
+
+def resourceDirs = [
+        "templates/html/messenger/res"
+]
+
+task generateResourceIndex {
+    inputs.files resourceDirs.collect { file("src/main/resources/$it") }
+    outputs.files resourceDirs.collect { file("src/main/resources/$it/index.txt") }
+
+    doLast {
+        resourceDirs.each { resDirPath ->
+            def dir = file("src/main/resources/$resDirPath")
+            if (!dir.exists()) {
+                logger.warn("Resource directory does not exist: $dir")
+                return
+            }
+            def outputFile = new File(dir, "index.txt")
+
+            def indexLines = []
+            dir.eachFileRecurse { file ->
+                if (file.isFile() && file.name != "index.txt") { // skip the index file itself
+                    def relativePath = dir.toPath().relativize(file.toPath()).toString()
+                    indexLines << relativePath
+                }
+            }
+
+            outputFile.text = indexLines.join('\n')
+            println "Generated index file at: $outputFile"
+        }
+    }
+}
+
+// Make sure this runs before processResources so index is included in resources
+processResources.dependsOn generateResourceIndex
+
+// FAT JAR TASK
+tasks.register('fatJar', Jar) {
+    group = 'build'
+    description = 'Assembles a fat JAR with dependencies'
+
+    manifest {
+        attributes 'Main-Class': application.mainClass.get()
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    with jar
+    archiveBaseName.set('app') // Your output will be app.jar
+    archiveClassifier.set('')
+}
