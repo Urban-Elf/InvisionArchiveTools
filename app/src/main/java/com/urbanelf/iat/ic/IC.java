@@ -21,8 +21,6 @@ package com.urbanelf.iat.ic;
 
 import com.urbanelf.iat.util.JSONSerializable;
 
-import org.json.JSONObject;
-
 public abstract class IC implements JSONSerializable {
     private final String rootUrl;
 

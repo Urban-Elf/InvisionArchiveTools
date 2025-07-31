@@ -51,3 +51,4 @@ def log(level: LogLevel, message: str, error_trace: bool=False):
         error_string = traceback.format_exc()
     sys.stderr.write("[" + threading.current_thread().getName() + "] " + level.name + " - " + message + error_string + "\n")
     sys.stderr.flush()
+    

@@ -35,5 +35,6 @@ class JSONWriter(Writer):
     @staticmethod
     def write(content) -> str:
         path: Path = EXPORT_PATH / (hash_instant() + ".json")
-        path.write_text(json.dumps(content.__serialize__()) + '\n')
+        with path.open("w", encoding="utf-8") as file:
+            content.__ndjson_write__(file_obj=file)
         return str(path)
