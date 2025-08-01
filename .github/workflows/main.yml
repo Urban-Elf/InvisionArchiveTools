@@ -83,9 +83,7 @@ jobs:
 
     - name: Create DEB installer
       run: |
-        mkdir -p ./jpackage/linux/res/DEBIAN
-        
-        cat > ./jpackage/linux/res/DEBIAN/control <<EOF
+        cat > ./jpackage/linux/res/control <<EOF
         Package: invision-archive-tools
         Version: ${{ steps.version.outputs.version }}
         Architecture: amd64
