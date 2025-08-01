@@ -50,17 +50,6 @@ jobs:
         name: iat-fatjar
         path: app/build/libs
 
-    - name: Export HTML Archive (placeholder)
-      run: |
-        mkdir output
-        echo "<html><body>Placeholder export</body></html>" > output/index.html
-
-    - name: Upload HTML
-      uses: actions/upload-artifact@v4
-      with:
-        name: invision-html
-        path: output/
-
   # Phase C - Linux DEB Installer
   linux-installer:
     runs-on: ubuntu-latest
@@ -96,7 +85,7 @@ jobs:
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
           --dest output \
-          --name iat \
+          --name "invision-archive-tools" \
           --title "Invision Archive Tools" \
           --icon jpackage/linux/icon.png \
           --app-version "$VERSION"
@@ -142,7 +131,7 @@ jobs:
           --main-class com.urbanelf.iat.Core `
           --runtime-image jbr `
           --dest output `
-          --name iat `
+          --name "invision-archive-tools" `
           --title "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
           --app-version $version
@@ -188,7 +177,7 @@ jobs:
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
           --dest output \
-          --name iat \
+          --name "invision-archive-tools" \
           --title "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
           --app-version "$VERSION"
