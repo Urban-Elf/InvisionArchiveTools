@@ -14,11 +14,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set up Java 21
+    - name: Set up Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '21'
+        java-version: '17'
 
     - name: Cache Gradle
       uses: actions/cache@v4
@@ -60,16 +60,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Java 21
+    - name: Set up Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '21'
+        java-version: '17'
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr_jcef-21.0.8-linux-x64-b1038.68.tar.gz
-        mkdir jbr && tar -xf jbr.tar.gz -C jbr --strip-components=1
+        curl -L -o jre.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.12-linux-x64-b1000.54.tar.gz
+        mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
@@ -99,7 +99,7 @@ jobs:
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
-          --runtime-image jbr \
+          --runtime-image jre \
           --resource-dir jpackage/linux/res \
           --dest output \
           --name "Invision Archive Tools" \
@@ -127,16 +127,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Java 21
+    - name: Set up Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '21'
+        java-version: '17'
 
-    - name: Download JBR
+    - name: Download JRE
       run: |
-        curl -L -o jbr.zip https://cache-redirector.jetbrains.com/intellij-jbr/jbr_jcef-21.0.8-windows-x64-b1038.68.zip
-        mkdir jbr && tar -xf jbr.zip -C jbr --strip-components=1
+        curl -L -o jre.zip https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_windows_hotspot_17.0.16_8.zip
+        mkdir jre
+        7z x jre.zip -ojre
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
@@ -156,7 +157,7 @@ jobs:
           --input app\build\libs `
           --main-jar app.jar `
           --main-class com.urbanelf.iat.Core `
-          --runtime-image jbr `
+          --runtime-image jre `
           --dest output `
           --name "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
@@ -181,16 +182,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Java 21
+    - name: Set up Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '21'
+        java-version: '17'
 
-    - name: Download JBR
+    - name: Download JRE
       run: |
-        curl -L -o jbr.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr_jcef-21.0.8-osx-x64-b1038.68.tar.gz
-        mkdir jbr && tar -xf jbr.tar.gz -C jbr --strip-components=1
+        curl -L -o jre.tar.gz https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_mac_hotspot_17.0.16_8.tar.gz
+        mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
@@ -209,7 +210,7 @@ jobs:
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
-          --runtime-image jbr \
+          --runtime-image jre \
           --dest output \
           --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
