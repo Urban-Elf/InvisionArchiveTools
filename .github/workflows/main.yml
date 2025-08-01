@@ -89,9 +89,10 @@ jobs:
         Package: invision-archive-tools
         Version: ${{ steps.version.outputs.version }}
         Architecture: amd64
-        Maintainer: Mark Fisher <iat.legacy037@aleeas.com>
+        Maintainer: Gerald <iat.legacy037@aleeas.com>
         Depends:
         Description: A user-friendly tool that enables members of Invision-based communities to convert a variety of different types of content to offline copies.
+        EOF
       
         jpackage \
           --type deb \
