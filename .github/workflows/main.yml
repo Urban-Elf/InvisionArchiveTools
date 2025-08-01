@@ -74,10 +74,12 @@ jobs:
         name: iat-fatjar
         path: app/build/libs
 
+    - name: Read version
+      id: version
+      run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+
     - name: Create DEB installer
       run: |
-        VERSION=$(cat ./VERSION)
-        
         jpackage \
           --type deb \
           --input app/build/libs \
@@ -87,13 +89,13 @@ jobs:
           --dest output \
           --name "Invision Archive Tools" \
           --icon jpackage/linux/icon.png \
-          --app-version "$VERSION" \
+          --app-version "${{ steps.version.outputs.version }}" \
           --verbose
 
     - name: Upload DEB to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v$(cat ./VERSION)
+        tag_name: v${{ steps.version.outputs.version }}
         files: output/*.deb
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -173,10 +175,13 @@ jobs:
         name: iat-fatjar
         path: app/build/libs
 
+    - name: Read version
+      id: version
+      run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+
     - name: Create PKG installer
       run: |
-        VERSION=$(cat ./VERSION)
-        
+       
         jpackage \
           --type pkg \
           --input app/build/libs \
@@ -186,13 +191,13 @@ jobs:
           --dest output \
           --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
-          --app-version "$VERSION" \
+          --app-version "${{ steps.version.outputs.version }}" \
           --verbose
 
     - name: Upload PKG to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v$(cat ./VERSION)
+        tag_name: v${{ steps.version.outputs.version }}
         files: output/*.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
