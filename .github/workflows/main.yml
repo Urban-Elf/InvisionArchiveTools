@@ -202,14 +202,14 @@ jobs:
       id: version
       run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
-    - name: Create PKG installer
+    - name: Create DMG installer
       run: |
         jpackage \
-          --type pkg \
+          --type dmg \
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
-          --install-dir "/Applications" \
+          --runtime-image jbr `
           --dest output \
           --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
