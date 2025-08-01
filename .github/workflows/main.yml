@@ -130,15 +130,15 @@ jobs:
 
     - name: Create EXE installer
       run: |
-        jpackage ^
-          --type exe ^
-          --input app\build\libs ^
-          --main-jar app.jar ^
-          --main-class com.urbanelf.iat.Core ^
-          --runtime-image jbr ^
-          --dest output ^
-          --name InvisionArchiveTools ^
-          --icon jpackage/windows/icon.ico ^
+        jpackage `
+          --type exe `
+          --input app\build\libs `
+          --main-jar app.jar `
+          --main-class com.urbanelf.iat.Core `
+          --runtime-image jbr `
+          --dest output `
+          --name InvisionArchiveTools `
+          --icon jpackage/windows/icon.ico `
           --app-version 1.0.0
 
     - name: Upload EXE
