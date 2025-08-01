@@ -257,7 +257,7 @@ jobs:
     - name: Create DMG installer
       run: |
         jpackage \
-          --type pkg \
+          --type dmg \
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
@@ -274,7 +274,7 @@ jobs:
     - name: Debug output folder
       run: ls -l output
 
-    - name: Upload PKG to GitHub Release
+    - name: Upload DMG to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
