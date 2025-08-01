@@ -191,6 +191,7 @@ jobs:
   # Phase D - Uplaod artifacts
   upload-artifacts:
     name: Upload Installers to GitHub Release
+    needs: [linux-installer, windows-installer, macos-installer]
     runs-on: ubuntu-latest
 
     permissions:
