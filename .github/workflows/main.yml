@@ -90,11 +90,13 @@ jobs:
           --app-version "$VERSION" \
           --verbose
 
-    - name: Upload DEB
-      uses: actions/upload-artifact@v4
+    - name: Upload DEB to GitHub Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: iat-linux-deb
-        path: output/*.deb
+        tag_name: v$(cat ./VERSION)
+        files: output/*.deb
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Phase C - Windows EXE Installer
   windows-installer:
@@ -119,11 +121,14 @@ jobs:
       with:
         name: iat-fatjar
         path: app\build\libs
+        
+    - name: Read version
+      id: version
+      run: |
+        echo "version=$(Get-Content -Raw -Path .\VERSION)" >> $env:GITHUB_OUTPUT
 
     - name: Create EXE installer
       run: |
-        $version = Get-Content -Raw -Path .\VERSION
-      
         jpackage `
           --type exe `
           --input app\build\libs `
@@ -133,14 +138,16 @@ jobs:
           --dest output `
           --name "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
-          --app-version $version `
+          --app-version ${{ steps.version.outputs.version }} `
           --verbose
 
-    - name: Upload EXE
-      uses: actions/upload-artifact@v4
+    - name: Upload EXE to GitHub Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: iat-windows-exe
-        path: output\*.exe
+        tag_name: v${{ steps.version.outputs.version }}
+        files: output\*.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Phase C - macOS PKG Installer
   macos-installer:
@@ -182,53 +189,11 @@ jobs:
           --app-version "$VERSION" \
           --verbose
 
-    - name: Upload PKG
-      uses: actions/upload-artifact@v4
+    - name: Upload PKG to GitHub Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: iat-macos-pkg
-        path: output/*.pkg
-        
-  # Phase D - Uplaod artifacts
-  upload-artifacts:
-    name: Upload Installers to GitHub Release
-    needs: [linux-installer, windows-installer, macos-installer]
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write  # Needed to upload release assets
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Read version
-        id: version
-        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
-
-      - name: Upload Linux .deb
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          files: |
-            dist/iat-linux-deb
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload macOS .pkg
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          files: |
-            dist/iat-macos-pkg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Windows .exe
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          files: |
-            dist/iat-windows-exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: v$(cat ./VERSION)
+        files: output/*.pkg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
