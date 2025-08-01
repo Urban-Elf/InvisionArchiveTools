@@ -93,19 +93,6 @@ public class ThemeManager {
 
     public static void applyDefaultTheme() {
         try {
-            // Get defaults table
-
-            /*UIDefaults defaults = UIManager.getDefaults();
-
-            // Extract a typical font (e.g., Label.font)
-            Font defaultFont = defaults.getFont("Label.font");
-
-            if (defaultFont != null) {
-                FlatLaf.setPreferredFontFamily(defaultFont.getFamily());
-            } else {
-                Core.info(TAG, "Blast");
-            }*/
-
             try {
                 usingDark = LocalStorage.getJsonObject().has(LS_THEME) && LocalStorage.getJsonObject().getString(LS_THEME).equals("dark");
             } catch (JSONException e) {
