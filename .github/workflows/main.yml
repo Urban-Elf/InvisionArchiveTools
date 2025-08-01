@@ -71,6 +71,7 @@ jobs:
 
     - name: Move and rename server archive
       run: |
+        rm -rf app/src/main/resources/server
         mkdir -p app/src/main/resources/server
         mv "server/server.zip" app/src/main/resources/server/server.zip
       shell: bash
@@ -121,7 +122,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar
+        name: iat-fatjar-${{ runner.os }}
         path: app/build/libs
 
     - name: Read version
@@ -189,7 +190,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar
+        name: iat-fatjar-${{ runner.os }}
         path: app\build\libs
         
     - name: Read version
@@ -243,7 +244,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar
+        name: iat-fatjar-${{ runner.os }}
         path: app/build/libs
 
     - name: Read version
