@@ -28,7 +28,7 @@ class IC_ChromeDriver(undetected_chromedriver.Chrome):
     def __init__(self, ic_worker: ICWorker, options=None, user_data_dir=None, driver_executable_path=None, browser_executable_path=None, port=0, enable_cdp_events=False, desired_capabilities=None, advanced_elements=False, keep_alive=True, log_level=0, headless=False, version_main=None, patcher_force_close=False, suppress_welcome=True, use_subprocess=True, debug=False, no_sandbox=True, user_multi_procs = False, **kw):
         super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
         self.ic_worker = ic_worker
-        self.network_err_state = ICWorkerState(note="Network error. Please check your connection.",
+        self.network_err_state = ICWorkerState(note="Please check your network connection.",
                                                  hint="",
                                                  button_configs=[ButtonConfig("Retry", client_object=True)])
 

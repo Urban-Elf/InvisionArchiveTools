@@ -87,6 +87,8 @@ jobs:
 
     - name: Create DEB installer
       run: |
+        VERSION=$(cat ./VERSION)
+        
         jpackage \
           --type deb \
           --input app/build/libs \
@@ -94,9 +96,10 @@ jobs:
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
           --dest output \
-          --name InvisionArchiveTools \
+          --name iat \
+          --title "Invision Archive Tools" \
           --icon jpackage/linux/icon.png \
-          --app-version 1.0.0
+          --app-version "$VERSION"
 
     - name: Upload DEB
       uses: actions/upload-artifact@v4
@@ -130,6 +133,8 @@ jobs:
 
     - name: Create EXE installer
       run: |
+        $version = Get-Content -Raw -Path .\VERSION
+      
         jpackage `
           --type exe `
           --input app\build\libs `
@@ -137,9 +142,10 @@ jobs:
           --main-class com.urbanelf.iat.Core `
           --runtime-image jbr `
           --dest output `
-          --name InvisionArchiveTools `
+          --name iat `
+          --title "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
-          --app-version 1.0.0
+          --app-version $version
 
     - name: Upload EXE
       uses: actions/upload-artifact@v4
@@ -173,6 +179,8 @@ jobs:
 
     - name: Create PKG installer
       run: |
+        VERSION=$(cat ./VERSION)
+        
         jpackage \
           --type pkg \
           --input app/build/libs \
@@ -180,9 +188,10 @@ jobs:
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
           --dest output \
-          --name InvisionArchiveTools \
+          --name iat \
+          --title "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
-          --app-version 1.0.0
+          --app-version "$VERSION"
 
     - name: Upload PKG
       uses: actions/upload-artifact@v4

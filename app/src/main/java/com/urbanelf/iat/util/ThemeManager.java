@@ -29,8 +29,6 @@ import com.urbanelf.iat.Core;
 
 import org.json.JSONException;
 
-import java.awt.Font;
-
 import javax.swing.*;
 
 public class ThemeManager {
