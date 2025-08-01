@@ -7,50 +7,75 @@ permissions:
   contents: write
 
 jobs:
-  # Phase A - Build
-  build:
-    runs-on: ubuntu-latest
+  # Phase A - Build server
+  build-server:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: server-linux
+            archive_cmd: zip -r server.zip server
+          - os: windows-latest
+            artifact_name: server-windows
+            archive_cmd: powershell Compress-Archive -Path server -DestinationPath server.zip
+          - os: macos-latest
+            artifact_name: server-macos
+            archive_cmd: zip -r server.zip server
+
+    runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
-    - name: Compile server (Linux & macOS)
-      if: runner.os != 'Windows'
+    - name: Build Python server
       working-directory: server
-      run: |
-        python dist-server.py
-      shell: bash
+      run: python dist-server.py
 
-    - name: Compile server (Windows)
-      if: runner.os == 'Windows'
-      working-directory: server
-      run: |
-        python dist-server.py
-      shell: bash
-
-    - name: Archive server folder (Linux & macOS)
-      if: runner.os != 'Windows'
+    - name: Archive server folder
       working-directory: server/dist
-      run: |
-        zip -r server.zip server
-      shell: bash
+      run: ${{ matrix.archive_cmd }}
 
-    - name: Archive server folder (Windows)
-      if: runner.os == 'Windows'
-      working-directory: server/dist
-      run: |
-        powershell Compress-Archive -Path server -DestinationPath server.zip
+    - name: Upload server.zip
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: server/dist/server.zip
 
-    - name: Copy server.zip into app resources
-      working-directory: .
+  # Phase B - Build app
+  build:
+    needs:
+      - build-server-linux
+      - build-server-windows
+      - build-server-macos
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            server_artifact: server-linux
+          - os: windows-latest
+            server_artifact: server-windows
+          - os: macos-latest
+            server_artifact: server-macos
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download server artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ matrix.server_artifact }}
+        path: server
+
+    - name: Move and rename server archive
       run: |
         mkdir -p app/src/main/resources/server
-        cp server/dist/server.zip app/src/main/resources/server/
+        mv "server/server.zip" app/src/main/resources/server/server.zip
       shell: bash
 
     - name: Set up Java 17
@@ -75,22 +100,8 @@ jobs:
     - name: Upload JAR
       uses: actions/upload-artifact@v4
       with:
-        name: iat-fatjar
+        name: iat-fatjar-${{ matrix.os }}
         path: app/build/libs/app.jar
-
-  # Phase B - Export Additional Artifacts
-  export:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Download fatJar
-      uses: actions/download-artifact@v4
-      with:
-        name: iat-fatjar
-        path: app/build/libs
 
   # Phase C - Linux DEB Installer
   linux-installer:
