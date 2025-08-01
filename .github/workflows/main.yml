@@ -83,16 +83,29 @@ jobs:
 
     - name: Create DEB installer
       run: |
+        mkdir -p ./jpackage/linux/res/DEBIAN
+        
+        cat > ./jpackage/linux/res/DEBIAN/control <<EOF
+        Package: invision-archive-tools
+        Version: ${{ steps.version.outputs.version }}
+        Architecture: amd64
+        Maintainer: Mark Fisher <iat.legacy037@aleeas.com>
+        Depends:
+        Description: A user-friendly tool that enables members of Invision-based communities to convert a variety of different types of content to offline copies.
+      
         jpackage \
           --type deb \
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
+          --resource-dir jpackage/linux/res \
           --dest output \
           --name "Invision Archive Tools" \
           --icon jpackage/linux/icon.png \
           --app-version "${{ steps.version.outputs.version }}" \
+          --linux-shortcut \
+          --linux-menu-group "IAT;Invision;Archive;Tools" \
           --verbose
 
     - name: Upload DEB to GitHub Release
@@ -100,6 +113,7 @@ jobs:
       with:
         tag_name: v${{ steps.version.outputs.version }}
         files: output/*.deb
+        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -144,6 +158,9 @@ jobs:
           --name "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
           --app-version ${{ steps.version.outputs.version }} `
+          --win-menu `
+          --win-per-user-install `
+          --win-shortcut `
           --verbose
 
     - name: Upload EXE to GitHub Release
@@ -151,6 +168,7 @@ jobs:
       with:
         tag_name: v${{ steps.version.outputs.version }}
         files: "output/*.exe"
+        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -184,7 +202,6 @@ jobs:
 
     - name: Create PKG installer
       run: |
-       
         jpackage \
           --type pkg \
           --input app/build/libs \
@@ -202,6 +219,7 @@ jobs:
       with:
         tag_name: v${{ steps.version.outputs.version }}
         files: output/*.pkg
+        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
