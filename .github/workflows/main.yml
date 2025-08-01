@@ -209,7 +209,7 @@ jobs:
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
-          --runtime-image jbr `
+          --runtime-image jbr \
           --dest output \
           --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
