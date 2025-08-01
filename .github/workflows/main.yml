@@ -33,7 +33,7 @@ jobs:
     - name: Upload JAR
       uses: actions/upload-artifact@v4
       with:
-        name: invision-fatjar
+        name: iat-fatjar
         path: app/build/libs/app.jar
 
   # Phase B - Export Additional Artifacts
@@ -47,7 +47,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: invision-fatjar
+        name: iat-fatjar
         path: app/build/libs
 
     - name: Export HTML Archive (placeholder)
@@ -76,13 +76,13 @@ jobs:
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.tar.gz https://github.com/JetBrains/JetBrainsRuntime/releases/download/jbr-21_0_3b1764.1/jbr_jcef-21.0.3-linux-x64-b1764.1.tar.gz
+        curl -L -o jbr.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr_jcef-21.0.8-linux-x64-b1038.68.tar.gz
         mkdir jbr && tar -xf jbr.tar.gz -C jbr --strip-components=1
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: invision-fatjar
+        name: iat-fatjar
         path: app/build/libs
 
     - name: Create DEB installer
@@ -101,7 +101,7 @@ jobs:
     - name: Upload DEB
       uses: actions/upload-artifact@v4
       with:
-        name: invision-linux-deb
+        name: iat-linux-deb
         path: output/*.deb
 
   # Phase C - Windows EXE Installer
@@ -119,13 +119,13 @@ jobs:
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.zip https://github.com/JetBrains/JetBrainsRuntime/releases/download/jbr-21_0_3b1764.1/jbr_jcef-21.0.3-windows-x64-b1764.1.zip
+        curl -L -o jbr.zip https://cache-redirector.jetbrains.com/intellij-jbr/jbr_jcef-21.0.8-windows-x64-b1038.68.zip
         mkdir jbr && tar -xf jbr.zip -C jbr --strip-components=1
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: invision-fatjar
+        name: iat-fatjar
         path: app\build\libs
 
     - name: Create EXE installer
@@ -144,7 +144,7 @@ jobs:
     - name: Upload EXE
       uses: actions/upload-artifact@v4
       with:
-        name: invision-windows-exe
+        name: iat-windows-exe
         path: output\*.exe
 
   # Phase C - macOS PKG Installer
@@ -162,13 +162,13 @@ jobs:
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.tar.gz https://github.com/JetBrains/JetBrainsRuntime/releases/download/jbr-21_0_3b1764.1/jbr_jcef-21.0.3-macos-x64-b1764.1.tar.gz
+        curl -L -o jbr.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr_jcef-21.0.8-osx-x64-b1038.68.tar.gz
         mkdir jbr && tar -xf jbr.tar.gz -C jbr --strip-components=1
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: invision-fatjar
+        name: iat-fatjar
         path: app/build/libs
 
     - name: Create PKG installer
@@ -187,5 +187,5 @@ jobs:
     - name: Upload PKG
       uses: actions/upload-artifact@v4
       with:
-        name: invision-macos-pkg
+        name: iat-macos-pkg
         path: output/*.pkg
