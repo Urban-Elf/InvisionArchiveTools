@@ -76,7 +76,7 @@ jobs:
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.tar.gz https://cache-redirect.jetbrains.com/intellij-jbr/jbr_jcef-21.0.3-linux-x64-b1764.1.tar.gz
+        curl -L -o jbr.tar.gz https://github.com/JetBrains/JetBrainsRuntime/releases/download/jbr-21_0_3b1764.1/jbr_jcef-21.0.3-linux-x64-b1764.1.tar.gz
         mkdir jbr && tar -xf jbr.tar.gz -C jbr --strip-components=1
 
     - name: Download fatJar
@@ -119,8 +119,8 @@ jobs:
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.zip https://cache-redirect.jetbrains.com/intellij-jbr/jbr_jcef-21.0.3-windows-x64-b1764.1.zip
-        tar -xf jbr.zip -d jbr
+        curl -L -o jbr.zip https://github.com/JetBrains/JetBrainsRuntime/releases/download/jbr-21_0_3b1764.1/jbr_jcef-21.0.3-windows-x64-b1764.1.zip
+        mkdir jbr && tar -xf jbr.zip -C jbr --strip-components=1
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
@@ -162,7 +162,7 @@ jobs:
 
     - name: Download JBR
       run: |
-        curl -L -o jbr.tar.gz https://cache-redirect.jetbrains.com/intellij-jbr/jbr_jcef-21.0.3-macos-x64-b1764.1.tar.gz
+        curl -L -o jbr.tar.gz https://github.com/JetBrains/JetBrainsRuntime/releases/download/jbr-21_0_3b1764.1/jbr_jcef-21.0.3-macos-x64-b1764.1.tar.gz
         mkdir jbr && tar -xf jbr.tar.gz -C jbr --strip-components=1
 
     - name: Download fatJar
