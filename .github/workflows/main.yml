@@ -108,12 +108,14 @@ jobs:
           --linux-menu-group "IAT;Invision;Archive;Tools" \
           --verbose
 
+    - name: Debug output folder
+      run: ls -l output
+
     - name: Upload DEB to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
         files: output/*.deb
-        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -168,7 +170,6 @@ jobs:
       with:
         tag_name: v${{ steps.version.outputs.version }}
         files: "output/*.exe"
-        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -214,12 +215,14 @@ jobs:
           --app-version "${{ steps.version.outputs.version }}" \
           --verbose
 
+    - name: Debug output folder
+      run: ls -l output
+
     - name: Upload PKG to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
         files: output/*.pkg
-        overwrite: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
