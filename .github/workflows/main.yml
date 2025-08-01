@@ -3,6 +3,9 @@ name: Invision Archive Tools - Build & Package
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   # Phase A - Build
   build:
@@ -147,7 +150,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
-        files: output\*.exe
+        files: "output/*.exe"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
