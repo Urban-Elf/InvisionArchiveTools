@@ -214,6 +214,9 @@ jobs:
           --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
           --app-version "${{ steps.version.outputs.version }}" \
+          --mac-package-name "Invision Archive Tools" \
+          --mac-package-identifier com.urbanelf.iat \
+          --mac-package-signing-prefix "com.urbanelf" \
           --verbose
 
     - name: Debug output folder
