@@ -54,10 +54,13 @@ jobs:
         include:
           - os: ubuntu-latest
             server_artifact: server-linux
+            artifact_suffix: linux
           - os: windows-latest
             server_artifact: server-windows
+            artifact_suffix: windows
           - os: macos-latest
             server_artifact: server-macos
+            artifact_suffix: macos
 
     steps:
     - name: Checkout
@@ -98,7 +101,7 @@ jobs:
     - name: Upload JAR
       uses: actions/upload-artifact@v4
       with:
-        name: iat-fatjar-${{ matrix.os }}
+        name: iat-fatjar-${{ matrix.artifact_suffix }}
         path: app/build/libs/app.jar
 
   # Phase C - Linux DEB Installer
@@ -122,7 +125,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar-${{ runner.os }}
+        name: iat-fatjar-linux
         path: app/build/libs
 
     - name: Read version
@@ -190,7 +193,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar-${{ runner.os }}
+        name: iat-fatjar-windows
         path: app\build\libs
         
     - name: Read version
@@ -244,7 +247,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar-${{ runner.os }}
+        name: iat-fatjar-macos
         path: app/build/libs
 
     - name: Read version
