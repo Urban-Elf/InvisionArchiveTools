@@ -149,10 +149,10 @@ jobs:
       run: |
         echo "version=$(Get-Content -Raw -Path .\VERSION)" >> $env:GITHUB_OUTPUT
 
-    - name: Create EXE installer
+    - name: Create MSI installer
       run: |
         jpackage `
-          --type exe `
+          --type msi `
           --input app\build\libs `
           --main-jar app.jar `
           --main-class com.urbanelf.iat.Core `
@@ -170,7 +170,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
-        files: "output/*.exe"
+        files: "output/*.msi"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
