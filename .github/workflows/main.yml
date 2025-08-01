@@ -85,10 +85,10 @@ jobs:
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
           --dest output \
-          --name "invision-archive-tools" \
-          --title "Invision Archive Tools" \
+          --name "Invision Archive Tools" \
           --icon jpackage/linux/icon.png \
-          --app-version "$VERSION"
+          --app-version "$VERSION" \
+          --verbose
 
     - name: Upload DEB
       uses: actions/upload-artifact@v4
@@ -131,10 +131,10 @@ jobs:
           --main-class com.urbanelf.iat.Core `
           --runtime-image jbr `
           --dest output `
-          --name "invision-archive-tools" `
-          --title "Invision Archive Tools" `
+          --name "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
-          --app-version $version
+          --app-version $version `
+          --verbose
 
     - name: Upload EXE
       uses: actions/upload-artifact@v4
@@ -177,10 +177,10 @@ jobs:
           --main-class com.urbanelf.iat.Core \
           --runtime-image jbr \
           --dest output \
-          --name "invision-archive-tools" \
-          --title "Invision Archive Tools" \
+          --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
-          --app-version "$VERSION"
+          --app-version "$VERSION" \
+          --verbose
 
     - name: Upload PKG
       uses: actions/upload-artifact@v4
