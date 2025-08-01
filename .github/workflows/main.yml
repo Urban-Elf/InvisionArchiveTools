@@ -257,7 +257,7 @@ jobs:
     - name: Create DMG installer
       run: |
         jpackage \
-          --type dmg \
+          --type pkg \
           --input app/build/libs \
           --main-jar app.jar \
           --main-class com.urbanelf.iat.Core \
