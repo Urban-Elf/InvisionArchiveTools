@@ -83,6 +83,8 @@ jobs:
 
     - name: Create DEB installer
       run: |
+        mkdir -p ./jpackage/linux/res
+        
         cat > ./jpackage/linux/res/control <<EOF
         Package: invision-archive-tools
         Version: ${{ steps.version.outputs.version }}
