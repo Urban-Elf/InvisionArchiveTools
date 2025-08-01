@@ -228,8 +228,13 @@ public class Core {
                         // Destroy frame
                         if (parent != null && destroyOnFinish)
                             parent.dispatchEvent(new WindowEvent(parent, WindowEvent.WINDOW_CLOSING));
-                        fxTask.complete(null);
+                        // Exits early if running on EDT (see below)
+                        if (!fxTask.isDone())
+                            fxTask.complete(null);
                     });
+                    // Prevents deadlock
+                    if (SwingUtilities.isEventDispatchThread())
+                        fxTask.complete(null);
                 } catch (Exception ex) {
                     Core.fatal(TAG, "Failed to export archive", ex);
                     fxTask.completeExceptionally(ex);
