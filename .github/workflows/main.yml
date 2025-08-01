@@ -47,10 +47,7 @@ jobs:
 
   # Phase B - Build app
   build:
-    needs:
-      - build-server-linux
-      - build-server-windows
-      - build-server-macos
+    needs: build-server
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
