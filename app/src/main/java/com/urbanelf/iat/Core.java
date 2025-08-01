@@ -169,6 +169,8 @@ public class Core {
         if (result == 1) {
             final CompletableFuture<Void> fxTask = new CompletableFuture<>();
 
+            final boolean isEDT = SwingUtilities.isEventDispatchThread();
+
             Platform.runLater(() -> {
                 try {
                     // Resolve format
@@ -228,12 +230,12 @@ public class Core {
                         // Destroy frame
                         if (parent != null && destroyOnFinish)
                             parent.dispatchEvent(new WindowEvent(parent, WindowEvent.WINDOW_CLOSING));
-                        // Exits early if running on EDT (see below)
-                        if (!fxTask.isDone())
+                        // Already exits [early] if running on EDT (see below)
+                        if (!isEDT)
                             fxTask.complete(null);
                     });
                     // Prevents deadlock
-                    if (SwingUtilities.isEventDispatchThread())
+                    if (isEDT)
                         fxTask.complete(null);
                 } catch (Exception ex) {
                     Core.fatal(TAG, "Failed to export archive", ex);
