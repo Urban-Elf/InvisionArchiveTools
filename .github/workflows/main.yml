@@ -189,16 +189,15 @@ jobs:
         curl -L -o jre.zip https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_windows_hotspot_17.0.16_8.zip
         mkdir jre
         7z x jre.zip -ojre
-        
-        REM Move contents up one level (flatten folder structure)
-        FOR /D %%i IN (jre\*) DO (
-        MOVE "%%i\*" jre\
-        RMDIR /S /Q "%%i"
-        GOTO done
-        )
-        :done
-        
-        del jre.zip
+
+        # Flatten directory structure
+        $dirs = Get-ChildItem -Directory -Path jre
+        foreach ($dir in $dirs) {
+          Move-Item -Path "$($dir.FullName)\*" -Destination jre
+          Remove-Item -Recurse -Force $dir.FullName
+        }
+    
+        Remove-Item jre.zip
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
@@ -253,11 +252,6 @@ jobs:
       run: |
         curl -L -o jre.tar.gz https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_mac_hotspot_17.0.16_8.tar.gz
         mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
-        
-        # Flatten top directory (jpackage assumes only 1 top-level folder in jre/)
-        shopt -s dotglob nullglob
-        mv jre/*/* jre/
-        rmdir jre/* 2>/dev/null || true
 
     - name: Download fatJar
       uses: actions/download-artifact@v4
