@@ -33,7 +33,8 @@ jobs:
 
     - name: Build Python server
       working-directory: server
-      run: python dist-server.py
+      run: |
+        python dist-server.py
 
     - name: Archive server folder
       working-directory: server/dist
