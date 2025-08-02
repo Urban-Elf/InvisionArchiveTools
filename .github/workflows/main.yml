@@ -17,7 +17,7 @@ jobs:
             archive_cmd: zip -r server.zip server
           - os: windows-latest
             artifact_name: server-windows
-            archive_cmd: powershell Compress-Archive -Path server -DestinationPath server.zip
+            archive_cmd: 7z a -tzip server.zip server
           - os: macos-latest
             artifact_name: server-macos
             archive_cmd: zip -r server.zip server
