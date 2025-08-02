@@ -11,9 +11,6 @@ docs
 # Linux script
 auto-dist-server.sh
 
-# PyInstaller spec
-server.spec
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

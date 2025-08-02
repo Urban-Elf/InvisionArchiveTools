@@ -8,6 +8,7 @@ MODULE_NAME = "server"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VENV_DIR = os.path.join(os.path.dirname(__file__), ".venv")
 REQUIREMENTS = os.path.join(os.path.dirname(__file__), "requirements.txt")
+SPEC_FILE = os.path.join(os.path.dirname(__file__), f"{MODULE_NAME}.spec")
 
 # Determine venv python path
 venv_python = os.path.join(VENV_DIR, "Scripts", "python.exe") if os.name == "nt" else os.path.join(VENV_DIR, "bin", "python")
@@ -34,8 +35,8 @@ def build():
     with open(os.path.join(PROJECT_ROOT, "VERSION")) as f:
         version = f.read().strip()
 
-    # Build with PyInstaller
-    run([venv_python, "-m", "PyInstaller", "bootstrap.py", "--name", MODULE_NAME, "--noconfirm"])
+    # Build using the .spec file
+    run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 
     # Write metadata.json
     metadata_dir = os.path.join("dist", MODULE_NAME)
