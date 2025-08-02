@@ -36,7 +36,14 @@ def build():
         version = f.read().strip()
 
     # Build with PyInstaller
-    run([venv_python, "-m", "PyInstaller", "bootstrap.py", "--name", MODULE_NAME, "--hidden-import \"bs4\"", "--noconfirm", "--log-level DEBUG", "--debug imports"])
+    run([
+        venv_python, "-m", "PyInstaller", "bootstrap.py",
+        "--name", MODULE_NAME,
+        "--hidden-import", "bs4",
+        "--noconfirm",
+        "--log-level", "DEBUG",
+        "--debug", "imports"
+    ])
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 
     # Write metadata.json
