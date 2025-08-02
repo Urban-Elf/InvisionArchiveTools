@@ -47,7 +47,7 @@ public class FileTree {
 
     static {
         switch (PlatformUtils.getRunningPlatform()) {
-            case Windows -> rootPath = Paths.get(System.getProperty("user.home"), "AppData", "Roaming", "IAT");
+            case Windows -> rootPath = Paths.get(System.getProperty("user.home"), "AppData", "Local", "IAT");
             case Mac -> rootPath = Paths.get(System.getProperty("user.home"), "Library", "Application Support", "IAT");
             // Linux, Unknown
             default -> rootPath = Paths.get(System.getProperty("user.home"), ".iat");

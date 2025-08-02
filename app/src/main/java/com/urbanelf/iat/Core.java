@@ -263,7 +263,7 @@ public class Core {
         }
 
         logger = new DefaultLogger();
-        logFileNameRaw = DateUtils.format("MM-dd-yyyy_h:mm:ss_a");
+        logFileNameRaw = DateUtils.format("MM-dd-yyyy_h-mm-ss_a");
         fatalLogFile = FileTree.getRootPath().resolve("fatal_" + logFileNameRaw + ".log").toFile();
 
         try {
