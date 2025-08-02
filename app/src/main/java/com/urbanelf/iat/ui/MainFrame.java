@@ -21,7 +21,6 @@ package com.urbanelf.iat.ui;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.urbanelf.iat.Core;
-import com.urbanelf.iat.Version;
 import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.content.parser.ParserDispatcher;
 import com.urbanelf.iat.ic.IC;
@@ -39,7 +38,6 @@ import com.urbanelf.iat.util.URLUtils;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.openqa.selenium.remote.http.Contents;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -51,7 +49,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -59,10 +56,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -71,7 +66,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
@@ -753,7 +747,13 @@ public class MainFrame extends JFrame {
             }
         });
 
+        final AtomicReference<Runnable> updateButtonStates = new AtomicReference<>();
+
         communityListModel.addListDataListener(new ListDataListener() {
+            {
+                updateButtonStates.set(this::updateButtonStates);
+            }
+
             @Override
             public void intervalAdded(ListDataEvent listDataEvent) {
                 updateButtonStates();
@@ -766,6 +766,7 @@ public class MainFrame extends JFrame {
 
             @Override
             public void contentsChanged(ListDataEvent listDataEvent) {
+                updateButtonStates();
             }
 
             private void updateButtonStates() {
@@ -773,6 +774,9 @@ public class MainFrame extends JFrame {
                 workerButtons.forEach(button -> button.setEnabled(enabled));
             }
         });
+
+        // Prevent users from starting null-workers on startup with empty community list
+        updateButtonStates.get().run();
 
         final JPanel panelWrapper = new JPanel();
         panelWrapper.setLayout(new BoxLayout(panelWrapper, BoxLayout.X_AXIS));
@@ -811,9 +815,11 @@ public class MainFrame extends JFrame {
                     Object[] options2 = {"OK"};
                     JOptionPane.showOptionDialog(
                             MainFrame.this,
-                            "This content type is currently in development, but not yet supported.\n\n"
-                                + "Updates will be available on the GitHub repo (Help → About).\n"
-                                + "Thank you for your patience!",
+                            """
+                                    This content type is currently in development, but not yet supported.
+                                    
+                                    Updates will be available on the GitHub repo (Help → About).
+                                    Thank you for your patience!""",
                             "Work in progress",
                             JOptionPane.DEFAULT_OPTION,
                             JOptionPane.INFORMATION_MESSAGE,
@@ -929,10 +935,12 @@ public class MainFrame extends JFrame {
 
                 if (Version.v5.equals(selected)) {
                     JOptionPane.showMessageDialog(MainFrame.this,
-                            "Support for Invision Community v5.0 is in consideration, but\n"
-                            + "has not yet been implemented.\n\n"
-                            + "IC v4.0 might be compatible with it, though it is untested,\n"
-                            + "so use at your own risk.",
+                            """
+                                    Support for Invision Community v5.0 is in consideration, but
+                                    has not yet been implemented.
+                                    
+                                    IC v4.0 might be compatible with it, though it is untested,
+                                    so use at your own risk.""",
                             "Not supported",
                             JOptionPane.INFORMATION_MESSAGE);
 
