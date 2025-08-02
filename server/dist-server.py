@@ -40,6 +40,7 @@ def build():
         venv_python, "-m", "PyInstaller", "bootstrap.py",
         "--name", MODULE_NAME,
         "--hidden-import", "bs4",
+        "--collect-all", "bs4",
         "--noconfirm",
         "--log-level", "DEBUG",
         "--debug", "imports"
