@@ -103,7 +103,7 @@ public class WorkerFrame extends JFrame {
                             final String generalText = "<html>IAT failed to start chromedriver.\n\n"
                                     + " - Please verify you have Chrome installed on your machine, and try again.\n"
                                     + "   Download at: " + link + "\n"
-                                    + " - If you have a question, feel free to contact the developer:"
+                                    + " - If you have any questions, feel free to contact the developer:"
                                     + "   <b>(Help -> Report Bug)</b></html>";
 
                             // Determine exception
