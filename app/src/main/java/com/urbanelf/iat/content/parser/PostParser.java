@@ -19,9 +19,9 @@
 
 package com.urbanelf.iat.content.parser;
 
-import com.urbanelf.iat.content.Content;
-import com.urbanelf.iat.content.PostContent;
-import com.urbanelf.iat.content.struct.Post;
+import com.urbanelf.iat.content.model.Content;
+import com.urbanelf.iat.content.model.PostContent;
+import com.urbanelf.iat.content.model.Post;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

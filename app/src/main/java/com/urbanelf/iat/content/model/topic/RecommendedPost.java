@@ -17,43 +17,30 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.content.writer.html.model;
+package com.urbanelf.iat.content.model.topic;
 
-import com.urbanelf.iat.content.struct.Post;
-import com.urbanelf.iat.content.struct.UserData;
+import org.json.JSONObject;
 
-public class MessengerArticle {
-    private final int page;
+public class RecommendedPost {
     private final String author;
-    private final String dateTime;
+    private final String contentPreview;
     private final String link;
-    private final String content;
 
-    public MessengerArticle(int page, Post post) {
-        this.page = page;
-        this.author = post.getAuthor();
-        this.dateTime = post.getDateTime();
-        this.link = post.getLink();
-        this.content = post.getContent();
-    }
-
-    public int getPage() {
-        return page;
+    public RecommendedPost(JSONObject jsonObject) {
+        author = jsonObject.getString("author");
+        contentPreview = jsonObject.getString("contentPreview");
+        link = jsonObject.getString("link");
     }
 
     public String getAuthor() {
         return author;
     }
 
-    public String getDateTime() {
-        return dateTime;
+    public String getContentPreview() {
+        return contentPreview;
     }
 
     public String getLink() {
         return link;
-    }
-
-    public String getContent() {
-        return content;
     }
 }

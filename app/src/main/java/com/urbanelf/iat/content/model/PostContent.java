@@ -17,10 +17,7 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.content;
-
-import com.urbanelf.iat.content.struct.Post;
-import com.urbanelf.iat.content.struct.UserData;
+package com.urbanelf.iat.content.model;
 
 import org.json.JSONObject;
 
@@ -44,6 +41,12 @@ public class PostContent implements Content {
                         new UserData(userDataObject.getJSONObject(key))));
         // Pages are populated by the NDJSON Parser
         this.pages = new ArrayList<>();
+    }
+
+    public PostContent(PostContent content) {
+        this.title = content.title;
+        this.userData = content.userData;
+        this.pages = content.pages;
     }
 
     @Override

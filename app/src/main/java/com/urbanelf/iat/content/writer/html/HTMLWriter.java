@@ -19,7 +19,7 @@
 
 package com.urbanelf.iat.content.writer.html;
 
-import com.urbanelf.iat.content.Content;
+import com.urbanelf.iat.content.model.Content;
 import com.urbanelf.iat.content.writer.Writer;
 
 import org.thymeleaf.TemplateEngine;

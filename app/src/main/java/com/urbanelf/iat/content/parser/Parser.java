@@ -19,7 +19,7 @@
 
 package com.urbanelf.iat.content.parser;
 
-import com.urbanelf.iat.content.Content;
+import com.urbanelf.iat.content.model.Content;
 
 import org.json.JSONObject;
 

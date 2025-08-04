@@ -19,6 +19,9 @@
 
 package com.urbanelf.iat;
 
+import com.urbanelf.iat.content.model.PostContent;
+import com.urbanelf.iat.content.model.topic.TopicPostContent;
+
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +43,6 @@ public class TopicPostContentTest {
                 """;
         final JSONObject jsonObject = new JSONObject(json);
         // Will throw JSONException if parsing fails
-        new TopicPostContent(jsonObject);
+        new TopicPostContent(new PostContent(jsonObject), jsonObject);
     }
 }

@@ -17,36 +17,24 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.content.struct;
+package com.urbanelf.iat.content.model.topic;
 
 import org.json.JSONObject;
 
-public class Post {
-    private final String author;
-    private final String dateTime;
-    private final String link;
-    private final String content;
+public class PollOption {
+    private final String text;
+    private final int value;
 
-    public Post(JSONObject jsonObject) {
-        this.author = jsonObject.getString("author");
-        this.dateTime = jsonObject.getString("datetime");
-        this.link = jsonObject.getString("link");
-        this.content = jsonObject.getString("content");
+    public PollOption(JSONObject jsonObject) {
+        text = jsonObject.getString("text");
+        value = jsonObject.getInt("value");
     }
 
-    public String getAuthor() {
-        return author;
+    public String getText() {
+        return text;
     }
 
-    public String getDateTime() {
-        return dateTime;
-    }
-
-    public String getLink() {
-        return link;
-    }
-
-    public String getContent() {
-        return content;
+    public int getValue() {
+        return value;
     }
 }

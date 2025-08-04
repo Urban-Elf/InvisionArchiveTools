@@ -22,6 +22,7 @@ package com.urbanelf.iat.proto.constants;
 import com.urbanelf.iat.content.ArchiveFormat;
 import com.urbanelf.iat.content.parser.PostParser;
 import com.urbanelf.iat.content.parser.Parser;
+import com.urbanelf.iat.content.parser.TopicPostParser;
 import com.urbanelf.iat.content.writer.Writer;
 import com.urbanelf.iat.content.writer.html.MessengerHTMLWriter;
 
@@ -29,7 +30,7 @@ import java.util.HashMap;
 
 public enum ContentType {
     MESSENGER(new PostParser()) {{ getWriterMap().put(ArchiveFormat.HTML, new MessengerHTMLWriter()); }},
-    TOPIC(new PostParser()),
+    TOPIC(new TopicPostParser()) {{  }},
     FORUM(null),
     BLOG_ENTRY(null);
 

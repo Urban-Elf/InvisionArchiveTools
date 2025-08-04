@@ -20,11 +20,10 @@
 package com.urbanelf.iat.content.writer.html;
 
 import com.urbanelf.iat.Core;
-import com.urbanelf.iat.content.Content;
-import com.urbanelf.iat.content.PostContent;
-import com.urbanelf.iat.content.struct.Post;
-import com.urbanelf.iat.content.struct.UserData;
-import com.urbanelf.iat.util.FileTree;
+import com.urbanelf.iat.content.model.Content;
+import com.urbanelf.iat.content.model.PostContent;
+import com.urbanelf.iat.content.model.Post;
+import com.urbanelf.iat.content.model.UserData;
 import com.urbanelf.iat.util.NumberUtils;
 import com.urbanelf.iat.util.ResourceUtils;
 
@@ -36,10 +35,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

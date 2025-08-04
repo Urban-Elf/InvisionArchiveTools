@@ -17,7 +17,7 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.content.struct;
+package com.urbanelf.iat.content.model;
 
 import org.json.JSONObject;
 

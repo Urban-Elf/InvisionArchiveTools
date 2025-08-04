@@ -20,30 +20,20 @@
 package com.urbanelf.iat.content.parser;
 
 import com.urbanelf.iat.content.model.Content;
-import com.urbanelf.iat.proto.constants.ContentType;
+import com.urbanelf.iat.content.model.PostContent;
+import com.urbanelf.iat.content.model.topic.TopicPostContent;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 
-public class ParserDispatcher {
-    public static ContentSpec process(File src) throws IOException, JSONException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(src))) {
-            String line;
-            // Parse header
-            if ((line = reader.readLine()) != null) {
-                final JSONObject header = new JSONObject(line);
-                final ContentType contentType = header.getEnum(ContentType.class, Content.HEADER_TYPE);
-                // Pass to parser
-                final Content content = contentType.getParser().parse(header, reader);
-                // Create spec
-                return new ContentSpec(contentType, src, content);
-            }
-        }
-        return null;
+public class TopicPostParser implements Parser {
+    @Override
+    public Content parse(JSONObject header, BufferedReader reader) throws IOException {
+        // Parse header (handled by content)
+        final PostContent content = new PostContent(header);
+        // Further header parsing
+        return new TopicPostContent(content, header);
     }
 }

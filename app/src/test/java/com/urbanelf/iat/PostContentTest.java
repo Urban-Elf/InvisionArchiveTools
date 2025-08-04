@@ -22,7 +22,7 @@ package com.urbanelf.iat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.urbanelf.iat.content.PostContent;
+import com.urbanelf.iat.content.model.PostContent;
 
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;

@@ -17,21 +17,29 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.content.writer;
+package com.urbanelf.iat.content.model.topic;
 
-import com.urbanelf.iat.content.ArchiveFormat;
-import com.urbanelf.iat.content.parser.ContentSpec;
-import com.urbanelf.iat.proto.constants.ContentType;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
-import org.json.JSONException;
+import java.util.ArrayList;
 
-import java.io.File;
-import java.io.IOException;
+public class PollQuestion {
+    private final String text;
+    private final ArrayList<PollOption> options;
 
-public class WriterDispatcher {
-    public static File write(ContentSpec spec, File dst, ArchiveFormat format) throws IOException, JSONException {
-        final ContentType contentType = spec.type();
-        // Write content to dst
-        return contentType.getWriterMap().get(format).write(spec.content(), dst);
+    public PollQuestion(JSONObject jsonObject) {
+        text = jsonObject.getString("text");
+        options = new ArrayList<>();
+        final JSONArray optionsArray = jsonObject.getJSONArray("options");
+        optionsArray.forEach(option -> options.add(new PollOption((JSONObject) option)));
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public ArrayList<PollOption> getOptions() {
+        return options;
     }
 }
