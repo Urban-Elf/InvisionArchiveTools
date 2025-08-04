@@ -138,7 +138,7 @@ def main(args: list[str]):
 
     util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi.where())
 
-    util.log(util.LogLevel.INFO, "IAT server started successfully.")
+util.log(util.LogLevel.INFO, "IAT server started successfully.")
     if DEBUG:
         util.log(util.LogLevel.INFO, "Debug mode is enabled.")
     util.log(util.LogLevel.INFO, "Waiting for client commands...")
