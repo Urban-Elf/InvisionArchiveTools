@@ -209,6 +209,7 @@ jobs:
     - name: Unzip and move server
       run: |
         7z x app/src/main/resources/server/server.zip -oapp/build/libs
+        del app\src\main\resources\server\server.zip
 
     - name: Read version
       id: version
