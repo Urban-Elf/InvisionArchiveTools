@@ -208,7 +208,6 @@ jobs:
         
     - name: Unzip and move server
       run: |
-        mkdir app/build/libs
         7z x app/src/main/resources/server/server.zip -oapp/build/libs
 
     - name: Read version
