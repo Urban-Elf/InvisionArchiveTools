@@ -38,12 +38,14 @@ import java.util.concurrent.TimeUnit;
 
 public class PythonServer {
     private static final String TAG = "Server";
+    private static final Path WINDOWS_INSTALLATION_PATH =
+            Path.of("C:", "Program Files", "Invision Archive Tools", "lib", "app", "server", "server.exe");
 
     private static final Path SERVER_EXECUTABLE_PATH;
 
     static {
         switch (PlatformUtils.getRunningPlatform()) {
-            case Windows -> SERVER_EXECUTABLE_PATH = FileTree.getServerPath().resolve("server.exe");
+            case Windows -> SERVER_EXECUTABLE_PATH = WINDOWS_INSTALLATION_PATH;
             default -> SERVER_EXECUTABLE_PATH = FileTree.getServerPath().resolve("server");
         }
     }
@@ -56,7 +58,10 @@ public class PythonServer {
             return;
 
         // Setup server directory
-        ServerExtractor.initialize();
+        if (PlatformUtils.getRunningPlatform() != PlatformUtils.Platform.Windows)
+            ServerExtractor.initialize();
+        else
+            Core.info(TAG, "Windows platform detected, skipping extraction process.");
 
         if (PlatformUtils.getRunningPlatform() != PlatformUtils.Platform.Windows) {
             final Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(SERVER_EXECUTABLE_PATH);
