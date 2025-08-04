@@ -29,7 +29,6 @@ import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.proto.ServerPacket;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
-import com.urbanelf.iat.util.PlatformUtils;
 
 import org.json.JSONObject;
 
@@ -100,20 +99,12 @@ public class WorkerFrame extends JFrame {
 
                             // Fallback (Version or exe issue)
                             final String link = "https://www.google.com/chrome/";
-                            final String auxLink;
 
-                            switch (PlatformUtils.getRunningPlatform()) {
-                                case Windows -> auxLink = "https://google-chrome.en.uptodown.com/windows/versions";
-                                case Mac ->  auxLink = "https://google-chrome.en.uptodown.com/mac/versions";
-                                default -> auxLink = "";
-                            }
-
-                            final String generalText = "IAT failed to start chromedriver.\n\n"
+                            final String generalText = "<html>IAT failed to start chromedriver.\n\n"
                                     + " - Please verify you have Chrome installed on your machine, and try again.\n"
                                     + "   Download at: " + link + "\n"
-                                    + (auxLink.isEmpty() ? "" : "   If the issue persists, try downloading an older version"
-                                    + "   instead from:\n" + auxLink + "\n")
-                                    + " - Contact the developer (Help → Report Bug)";
+                                    + " - If you have a question, feel free to contact the developer:"
+                                    + "   <b>(Help -> Report Bug)</b></html>";
 
                             // Determine exception
                             final String text;
@@ -124,12 +115,11 @@ public class WorkerFrame extends JFrame {
                                 text = networkText;
                                 okAction = () -> {};
                             } else {
-                                options = new String[] {"Close", auxLink.isEmpty() ? "Open Link" : "Open Links"};
+                                options = new String[] {"Close", "Open Link"};
                                 text = generalText;
                                 okAction = () -> {
                                     try {
                                         Desktop.getDesktop().browse(URI.create(link));
-                                        Desktop.getDesktop().browse(URI.create(auxLink));
                                     } catch (Exception e) {
                                         Core.error(TAG, e);
                                     }

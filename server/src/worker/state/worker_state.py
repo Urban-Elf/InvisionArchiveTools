@@ -59,7 +59,7 @@ class SharedState:
     SESSION_INVALID = ICWorkerState(note="Session invalid. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
-                                       hint="Please notify the developer (Help → Report Bug)",
+                                       hint="Please notify the developer (Help -> Report Bug)",
                                        button_configs=[
                                            ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG),
                                            ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)])
