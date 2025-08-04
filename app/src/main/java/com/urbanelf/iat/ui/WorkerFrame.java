@@ -100,11 +100,11 @@ public class WorkerFrame extends JFrame {
                             // Fallback (Version or exe issue)
                             final String link = "https://www.google.com/chrome/";
 
-                            final String generalText = "<html>IAT failed to start chromedriver.\n\n"
+                            final String generalText = "IAT failed to start chromedriver.\n\n"
                                     + " - Please verify you have Chrome installed on your machine, and try again.\n"
                                     + "   Download at: " + link + "\n"
                                     + " - If you have any questions, feel free to contact the developer:"
-                                    + "   <b>(Help -> Report Bug)</b></html>";
+                                    + "   (Help -> Report Bug";
 
                             // Determine exception
                             final String text;
