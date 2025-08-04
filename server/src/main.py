@@ -15,10 +15,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+
 import sys
 import uuid
-import threading
 import certifi
+import threading
 from . import util
 from . import shared_constants
 from .worker import ic_worker
