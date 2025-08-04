@@ -42,6 +42,8 @@ public class PlatformUtils {
     }
 
     public static Platform getRunningPlatform() {
+        if (PLATFORM == null)
+            throw new RuntimeException("PLATFORM should never be null");
         return PLATFORM;
     }
 
@@ -49,6 +51,6 @@ public class PlatformUtils {
         Linux,
         Windows,
         Mac,
-        Unknown;
+        Unknown
     }
 }

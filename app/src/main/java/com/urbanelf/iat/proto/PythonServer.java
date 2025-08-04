@@ -39,14 +39,15 @@ import java.util.concurrent.TimeUnit;
 public class PythonServer {
     private static final String TAG = "Server";
     private static final Path WINDOWS_INSTALLATION_PATH =
-            Path.of("C:", "Program Files", "Invision Archive Tools", "lib", "app", "server", "server.exe");
+            Path.of("C:", "Program Files", "Invision Archive Tools", "app", "server", "server.exe");
 
     private static final Path SERVER_EXECUTABLE_PATH;
 
     static {
-        switch (PlatformUtils.getRunningPlatform()) {
-            case Windows -> SERVER_EXECUTABLE_PATH = WINDOWS_INSTALLATION_PATH;
-            default -> SERVER_EXECUTABLE_PATH = FileTree.getServerPath().resolve("server");
+        if (PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Windows) {
+            SERVER_EXECUTABLE_PATH = WINDOWS_INSTALLATION_PATH;
+        } else {
+            SERVER_EXECUTABLE_PATH = FileTree.getServerPath().resolve("server");
         }
     }
 
