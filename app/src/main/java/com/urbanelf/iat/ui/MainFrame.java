@@ -139,7 +139,6 @@ public class MainFrame extends JFrame {
 
         setMinimumSize(new Dimension(770, 440));
         setSize(new Dimension(904, 486));
-        setLocationByPlatform(true);
 
         managedIcons = new ArrayList<>();
         communityListModel = new DefaultListModel<>();
@@ -239,6 +238,9 @@ public class MainFrame extends JFrame {
                 return jsonArray;
             }
         });
+
+        // Center frame
+        setLocationRelativeTo(null);
 
         // Set visible
         setVisible(true);
@@ -837,6 +839,9 @@ public class MainFrame extends JFrame {
                                 setCurrentWorker(null);
                             }
                         });
+                        // Align frame
+                        setLocationRelativeTo(MainFrame.this);
+                        // Show it
                         setVisible(true);
                     }
                 });

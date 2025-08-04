@@ -50,7 +50,7 @@ public class TOAFrame extends JFrame {
 
         final JButton continueButton = new JButton("Continue");
         continueButton.addActionListener(e -> {
-            result(true);
+            accepted();
             originContinue.set(true);
             dispatchEvent(new WindowEvent(TOAFrame.this, WindowEvent.WINDOW_CLOSING));
         });
@@ -143,9 +143,9 @@ public class TOAFrame extends JFrame {
         add(buttonPanel, BorderLayout.SOUTH);
 
         pack(); // size to fit components
-        setLocationRelativeTo(null); // center on parent
+        setLocationRelativeTo(null); // center
     }
 
-    protected void result(boolean accepted) {
+    protected void accepted() {
     }
 }

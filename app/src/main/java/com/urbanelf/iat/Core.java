@@ -419,7 +419,7 @@ public class Core {
                 } else {
                     new TOAFrame() {
                         @Override
-                        protected void result(boolean accepted) {
+                        protected void accepted() {
                             LocalStorage.getJsonObject().put(LS_AGREED_TO_TERMS, true);
                             LocalStorage.serialize();
                             new MainFrame(); // Automatically shows

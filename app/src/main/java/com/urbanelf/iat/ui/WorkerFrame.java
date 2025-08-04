@@ -20,10 +20,8 @@
 package com.urbanelf.iat.ui;
 
 import com.urbanelf.iat.Core;
-import com.urbanelf.iat.content.ArchiveFormat;
 import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.content.parser.ParserDispatcher;
-import com.urbanelf.iat.content.writer.WriterDispatcher;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.state.ICWorkerState;
 import com.urbanelf.iat.proto.ClientPacket;
@@ -32,7 +30,6 @@ import com.urbanelf.iat.proto.ServerPacket;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
 import com.urbanelf.iat.util.PlatformUtils;
-import com.urbanelf.iat.util.StringUtils;
 
 import org.json.JSONObject;
 
@@ -50,23 +47,15 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.nio.file.Files;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
-
-import javafx.application.Platform;
-import javafx.stage.FileChooser;
 
 public class WorkerFrame extends JFrame {
     private static final String TAG = WorkerFrame.class.getSimpleName();
@@ -215,7 +204,6 @@ public class WorkerFrame extends JFrame {
 
         setTitle(workerType.getUiTitle());
         setMinimumSize(new Dimension(320, (int) (320 * 1.7f)));
-        setLocationByPlatform(true);
 
         stateNote = new JLabel();
         stateNote.setHorizontalAlignment(JLabel.CENTER);
