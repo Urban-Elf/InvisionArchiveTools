@@ -41,8 +41,9 @@ def build():
         "--name", MODULE_NAME,
         "--hidden-import", "bs4",
         "--collect-all", "bs4",
-        "--noconfirm",
-        "--debug", "imports"
+        "--hidden-import", "certifi",
+        "--collect-all", "certifi",
+        "--noconfirm"
     ])
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 

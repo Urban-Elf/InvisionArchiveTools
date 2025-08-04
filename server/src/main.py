@@ -18,6 +18,7 @@
 import sys
 import uuid
 import threading
+import certifi
 from . import util
 from . import shared_constants
 from .worker import ic_worker
@@ -134,6 +135,8 @@ def main(args: list[str]):
 
     if "--single-worker" in args:
         SINGLE_WORKER = True
+
+    util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi.where())
 
     util.log(util.LogLevel.INFO, "IAT server started successfully.")
     if DEBUG:
