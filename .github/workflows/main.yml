@@ -206,6 +206,11 @@ jobs:
         name: iat-fatjar-windows
         path: app\build\libs
         
+    - name: Unzip and move server
+      run: |
+        mkdir app/build/libs
+        7z x app/src/main/resources/server/server.zip -oapp/build/libs
+
     - name: Read version
       id: version
       run: |
@@ -224,7 +229,6 @@ jobs:
           --icon jpackage/windows/icon.ico `
           --app-version ${{ steps.version.outputs.version }} `
           --win-menu `
-          --win-per-user-install `
           --win-shortcut `
           --verbose
 
