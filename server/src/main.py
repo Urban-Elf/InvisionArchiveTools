@@ -15,10 +15,27 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+import ssl
+import certifi
+import urllib.request
+
+# Save original
+_original_urlopen = urllib.request.urlopen
+
+# Custom SSL context with certifi CA
+_certifi_context = ssl.create_default_context(cafile=certifi.where())
+
+# Monkey-patch urlopen to always use certifi context
+def patched_urlopen(*args, **kwargs):
+    if 'context' not in kwargs:
+        kwargs['context'] = _certifi_context
+    return _original_urlopen(*args, **kwargs)
+
+urllib.request.urlopen = patched_urlopen
+
 import sys
 import uuid
 import threading
-import certifi
 from . import util
 from . import shared_constants
 from .worker import ic_worker
@@ -138,7 +155,7 @@ def main(args: list[str]):
 
     util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi.where())
 
-    util.log(util.LogLevel.INFO, "IAT server started successfully.")
+util.log(util.LogLevel.INFO, "IAT server started successfully.")
     if DEBUG:
         util.log(util.LogLevel.INFO, "Debug mode is enabled.")
     util.log(util.LogLevel.INFO, "Waiting for client commands...")
