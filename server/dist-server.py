@@ -43,6 +43,8 @@ def build():
         "--collect-all", "bs4",
         "--hidden-import", "certifi",
         "--collect-all", "certifi",
+        "--log-level", "DEBUG",
+        "--debug", "imports",
         "--noconfirm"
     ])
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
