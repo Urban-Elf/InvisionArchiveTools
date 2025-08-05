@@ -604,6 +604,8 @@ public class MainFrame extends JFrame {
 
         creditsPanel.add(new JScrollPane(credits) {
             {
+                getVerticalScrollBar().setUnitIncrement(Core.SCROLL_UNIT_INCREMENT);
+                getVerticalScrollBar().setBlockIncrement(Core.SCROLL_BLOCK_INCREMENT);
                 UIUtils.height(this, 350);
             }
         }, new GridBagConstraints() {

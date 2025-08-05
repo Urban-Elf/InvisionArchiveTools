@@ -19,6 +19,7 @@
 
 package com.urbanelf.iat.ui;
 
+import com.urbanelf.iat.Core;
 import com.urbanelf.iat.util.PlatformUtils;
 import com.urbanelf.iat.util.UIUtils;
 
@@ -121,6 +122,8 @@ public class TOAFrame extends JFrame {
         final JLabel content = new JLabel(termsHtml, JLabel.CENTER);
         contentPanel.add(new JScrollPane(content) {
              {
+                 getVerticalScrollBar().setUnitIncrement(Core.SCROLL_UNIT_INCREMENT);
+                 getVerticalScrollBar().setBlockIncrement(Core.SCROLL_BLOCK_INCREMENT);
                  UIUtils.height(this, 420);
              }
          });

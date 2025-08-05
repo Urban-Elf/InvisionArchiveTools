@@ -81,6 +81,9 @@ public class Core {
     public static final String DEVELOPER_EMAIL = "iat.legacy037@aleeas.com";
     private static final String LS_AGREED_TO_TERMS = "agreed_to_terms";
 
+    public static final int SCROLL_UNIT_INCREMENT = 16;
+    public static final int SCROLL_BLOCK_INCREMENT = 32;
+
     private static FileChooser FILE_CHOOSER;
 
     private static FileLock lock;
