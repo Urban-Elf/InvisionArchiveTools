@@ -12,14 +12,33 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: What OS, version, etc.?
-      placeholder: "e.g., Windows 11, v1.0.2"
+      description: Version(s) of the application that are affected
+      placeholder: "e.g. v1.0.2"
+
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Affected Platforms
+      description: Select all platforms where the issue occurs
+      options:
+        - label: Windows [x64]
+        - label: Linux [x64]
+        - label: Linux [aarch64]
+        - label: macOS [x64]
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the issue in more detail
+    validations:
+      required: true
 
   - type: textarea
     id: steps
     attributes:
       label: Steps to Reproduce
-      description: Provide a clear list of steps
+      description: Provide a clear list of steps, if applicable
       placeholder: |
         1. ...
         2. ...
