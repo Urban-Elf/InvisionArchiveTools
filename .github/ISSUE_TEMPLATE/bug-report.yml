@@ -30,7 +30,7 @@ body:
     id: description
     attributes:
       label: Description
-      description: Describe the issue in more detail
+      description: Describe the issue in more detail.
     validations:
       required: true
 
