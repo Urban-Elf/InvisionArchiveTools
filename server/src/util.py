@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+import json
 import sys
 import re
 import threading
@@ -44,6 +45,7 @@ class LogLevel(Enum):
     WARNING = auto()
     ERROR = auto()
     FATAL = auto()
+    DEBUG = auto()
 
 def log(level: LogLevel, message: str, error_trace: bool=False):
     error_string = ""
@@ -52,3 +54,5 @@ def log(level: LogLevel, message: str, error_trace: bool=False):
     sys.stderr.write("[" + threading.current_thread().getName() + "] " + level.name + " - " + message + error_string + "\n")
     sys.stderr.flush()
     
+def to_json(obj: dict):
+    return json.dumps(obj, ensure_ascii=False)

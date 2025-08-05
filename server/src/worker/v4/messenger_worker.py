@@ -25,6 +25,7 @@ from ...content.messenger import Messenger
 from ...content.writers import JSONWriter
 from ... import proto_model
 from ... import util
+from ... import main
 import re
 
 class MessengerWorkerV4State:
@@ -187,6 +188,9 @@ class MessengerWorkerV4(IC4Worker):
                 # Add post to page
                 page_posts.append(post)
                 
+                if main.DEBUG:
+                    util.log(util.LogLevel.DEBUG, f"Found post: " + util.to_json(post.__serialize__()))
+
                 # User data (if not already in members section)
                 if userdata_from_posts and not author_str in messenger.user_data:
                     profile_url = author.find_element(By.XPATH, "//a[img]").get_attribute("href")
@@ -194,6 +198,8 @@ class MessengerWorkerV4(IC4Worker):
                     user_data = UserData(profile_url=profile_url, avatar_url=avatar_url)
                     # Add to messenger construct
                     messenger.user_data[author_str] = user_data
+                    if main.DEBUG:
+                        util.log(util.LogLevel.DEBUG, f"Extracted user data for {author_str}: " + util.to_json(user_data.__serialize__()))
 
             # Append page
             messenger.pages.append(page_posts)
