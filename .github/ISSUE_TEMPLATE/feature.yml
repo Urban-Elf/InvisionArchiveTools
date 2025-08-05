@@ -1,0 +1,23 @@
+name: Feature Request
+description: File a feature request
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Target Platforms
+      description: Select all platforms where the issue occurs
+      options:
+        - label: Windows [x64]
+        - label: Linux [x64]
+        - label: Linux [aarch64]
+        - label: macOS [x64]
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the suggestion in detail.
+    validations:
+      required: true
