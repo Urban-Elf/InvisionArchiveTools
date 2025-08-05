@@ -16,6 +16,14 @@ body:
       placeholder: "e.g., Windows 11, v1.0.2"
 
   - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the issue in more detail.
+    validations:
+      required: true
+
+  - type: textarea
     id: steps
     attributes:
       label: Steps to Reproduce
