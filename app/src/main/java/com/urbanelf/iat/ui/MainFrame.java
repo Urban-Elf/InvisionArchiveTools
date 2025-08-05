@@ -822,7 +822,7 @@ public class MainFrame extends JFrame {
                             """
                                     This content type is currently in development, but not yet supported.
                                     
-                                    Updates will be available on the GitHub repo (Help → About).
+                                    Updates will be available on the GitHub repo (Help -> About).
                                     Thank you for your patience!""",
                             "Work in progress",
                             JOptionPane.DEFAULT_OPTION,
