@@ -164,23 +164,31 @@ class MessengerWorkerV4(IC4Worker):
             articles = comments_feed.find_elements(By.CSS_SELECTOR, "article")
 
             util.log(util.LogLevel.INFO, "Deconstructing articles (" + str(page) + "/" + str(final_page) + ")...")
+            util.log(util.LogLevel.DEBUG, "Found " + str(articles.__len__()) + " posts")
 
             # Group posts by page (25/page by IC default)
             page_posts: list[Post] = []
 
             for article in articles:
+                util.log(util.LogLevel.DEBUG, "Processing " + str(article))
                 author = article.find_element(By.CSS_SELECTOR, "h3.ipsComment_author")
+                util.log(util.LogLevel.DEBUG, "Found author element: " + str(author))
                 datetime = article.find_element(By.CSS_SELECTOR, "time")
+                util.log(util.LogLevel.DEBUG, "Found datetime element: " + str(datetime))
                 content = article.find_element(By.CSS_SELECTOR, "div[data-role=\"commentContent\"]")
+                util.log(util.LogLevel.DEBUG, "Found content element: " + str(content))
 
                 author_str: str = util.strip_tags(author.get_attribute("innerHTML"))
                 author_str = author_str.strip()
                 datetime_str = datetime.get_attribute("datetime").strip()
                 content_str = content.get_attribute("innerHTML").strip()
+                util.log(util.LogLevel.DEBUG, "Converted element contents: author='" + author_str + "', datetime='" + datetime_str + "', content='" + content_str + "'")
 
                 comment_id = article.get_attribute("id").replace("elComment_", "")
                 link = page_url + str(page) + "#findComment-" + comment_id
+                util.log(util.LogLevel.DEBUG, "Constructed link content: " + link)
 
+                util.log(util.LogLevel.DEBUG, "Constructing post model...")
                 # Post construct
                 post = Post(author=author_str, datetime=datetime_str, link=link, content=content_str)
                 # Crucial
@@ -188,8 +196,7 @@ class MessengerWorkerV4(IC4Worker):
                 # Add post to page
                 page_posts.append(post)
                 
-                if main.DEBUG:
-                    util.log(util.LogLevel.DEBUG, f"Found post: " + util.to_json(post.__serialize__()))
+                util.log(util.LogLevel.DEBUG, f"Found src post: " + util.to_json(post.__serialize__()))
 
                 # User data (if not already in members section)
                 if userdata_from_posts and not author_str in messenger.user_data:
@@ -198,8 +205,7 @@ class MessengerWorkerV4(IC4Worker):
                     user_data = UserData(profile_url=profile_url, avatar_url=avatar_url)
                     # Add to messenger construct
                     messenger.user_data[author_str] = user_data
-                    if main.DEBUG:
-                        util.log(util.LogLevel.DEBUG, f"Extracted user data for {author_str}: " + util.to_json(user_data.__serialize__()))
+                    util.log(util.LogLevel.DEBUG, f"Extracted user data for {author_str}: " + util.to_json(user_data.__serialize__()))
 
             # Append page
             messenger.pages.append(page_posts)

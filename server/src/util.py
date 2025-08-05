@@ -20,6 +20,7 @@ import sys
 import re
 import threading
 import traceback
+import main
 from enum import Enum, auto
 
 TAG_REGEX = r'<[^>]+>'
@@ -48,6 +49,8 @@ class LogLevel(Enum):
     DEBUG = auto()
 
 def log(level: LogLevel, message: str, error_trace: bool=False):
+    if level == LogLevel.DEBUG and not main.DEBUG:
+        return
     error_string = ""
     if error_trace:
         error_string = traceback.format_exc()
