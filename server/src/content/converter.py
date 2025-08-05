@@ -60,7 +60,10 @@ class ContentConverter:
 		date_str = "Unknown time"
 		if timestamp:
 			dt = datetime.fromtimestamp(int(timestamp))
-			date_str = dt.strftime("On %-m/%-d/%Y at %-I:%M %p")
+			hour = dt.hour % 12 or 12
+			minute = dt.minute
+			ampm = "AM" if dt.hour < 12 else "PM"
+			date_str = f"On {dt.month}/{dt.day}/{dt.year} at {hour}:{minute:02d} {ampm}"
 
 		# Build new outer blockquote
 		new_blockquote = self.soup.new_tag("blockquote", attrs={
