@@ -20,8 +20,9 @@ import sys
 import re
 import threading
 import traceback
-import main
 from enum import Enum, auto
+
+DEBUG = False
 
 TAG_REGEX = r'<[^>]+>'
 URL_REGEX = r'^https?://(www\.)?'
@@ -49,7 +50,7 @@ class LogLevel(Enum):
     DEBUG = auto()
 
 def log(level: LogLevel, message: str, error_trace: bool=False):
-    if level == LogLevel.DEBUG and not main.DEBUG:
+    if level == LogLevel.DEBUG and not DEBUG:
         return
     error_string = ""
     if error_trace:

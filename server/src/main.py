@@ -149,6 +149,7 @@ def main(args: list[str]):
     # Parse command-line arguments
     if "--debug" in args:
         DEBUG = True
+        util.DEBUG = True
 
     if "--single-worker" in args:
         SINGLE_WORKER = True

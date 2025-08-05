@@ -25,7 +25,6 @@ from ...content.messenger import Messenger
 from ...content.writers import JSONWriter
 from ... import proto_model
 from ... import util
-from ... import main
 import re
 
 class MessengerWorkerV4State:
