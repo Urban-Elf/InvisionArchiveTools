@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,7 +96,8 @@ public class MessengerHTMLWriter extends HTMLWriter {
                 context.setVariable("posts", page);
 
                 // Render page
-                try (Writer writer = new FileWriter(new File(pageDirectory, counter.get() + ".html"))) {
+                try (Writer writer = new FileWriter(new File(pageDirectory, counter.get() + ".html"),
+                        StandardCharsets.UTF_8)) {
                     engine.process(PAGE_TEMPLATE_PATH, context, writer);
                 } catch (IOException e) {
                     // Smuggle exception
@@ -124,7 +126,8 @@ public class MessengerHTMLWriter extends HTMLWriter {
         }
 
         // Render template
-        try (Writer writer = new FileWriter(new File(dstDirectory, dst.getName()))) {
+        try (Writer writer = new FileWriter(new File(dstDirectory, dst.getName()),
+                StandardCharsets.UTF_8)) {
             engine.process(INDEX_TEMPLATE_PATH, new Context(), writer);
         }
 
