@@ -51,6 +51,7 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -470,7 +471,7 @@ public class Core {
 
         try {
             logFile = FileTree.getLogPath().resolve(logFileNameRaw + ".log").toFile();
-            logStream = new PrintStream(logFile);
+            logStream = new PrintStream(logFile, StandardCharsets.UTF_8);
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
