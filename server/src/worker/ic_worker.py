@@ -84,10 +84,16 @@ class ICWorker(threading.Thread):
                 self.shutdown()
                 return
 
+            # Notify of chromedriver start
+            util.log(util.LogLevel.INFO, "Chromedriver started successfully.")
+            
             # Authenticate
             while not self.shutdown_event.is_set():
                 if not util.strip_url(self.ic.auth()) in util.strip_url(self.driver.current_url):
                     self.driver.get(self.ic.auth())
+
+                # Write packet
+                proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.CHROMEDRIVER_STARTED))
 
                 # Auto login (for testing)
                 if main.DEBUG:
@@ -170,17 +176,42 @@ class IC5Worker(ICWorker):
         super().__init__(worker_id, ic)
 
 from .ic_chromedriver import IC_ChromeDriver
+import shutil
+import os
+import sys
+
+def find_chrome_binary():
+    linux_paths = [
+        "/opt/google/chrome/google-chrome",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+    ]
+
+    if sys.platform == "linux":
+        for path in linux_paths:
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return path
+
+        # Try PATH as fallback
+        return shutil.which("google-chrome") or shutil.which("chrome") or shutil.which("chromium")
+
+    return None
 
 def create_chromedriver(ic_worker: ICWorker) -> IC_ChromeDriver:
     options = undetected_chromedriver.ChromeOptions()
     options.add_argument("--disable-infobars")
 
-    # TODO: Use this to check whether the user to installed chrome: print(undetected_chromedriver.find_chrome_executable())
+    chrome_path = find_chrome_binary()
+    if chrome_path:
+        options.binary_location = chrome_path
+
     driver = IC_ChromeDriver(ic_worker=ic_worker, options=options)
 
     # Get screen width and height
     screen = screeninfo.get_monitors()[0]  # primary monitor
     width = screen.width // 2.4
+    width = min(767, width) # Clamp width to IC RWD width for mobile
     height = screen.height
     driver.set_window_rect(0, 0, width, height)
     return driver

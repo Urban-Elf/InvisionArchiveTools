@@ -30,6 +30,8 @@ class ClientSA(Enum):
 class ServerSA(Enum):
     # data[uuid]
     UUID_AVAILABLE = auto()
+    # worker_id
+    CHROMEDRIVER_STARTED = auto()
     # worker_id, data[stacktrace]
     CHROMEDRIVER_ERROR = auto()
     # worker_id, data[state]

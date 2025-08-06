@@ -3,8 +3,10 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['bs4']
+hiddenimports = ['bs4', 'certifi']
 tmp_ret = collect_all('bs4')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('certifi')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
@@ -26,7 +28,7 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    [('v', None, 'OPTION')],
+    [],
     exclude_binaries=True,
     name='server',
     debug=False,

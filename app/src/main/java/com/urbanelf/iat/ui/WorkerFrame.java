@@ -23,12 +23,13 @@ import com.urbanelf.iat.Core;
 import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.content.parser.ParserDispatcher;
 import com.urbanelf.iat.ic.IC;
-import com.urbanelf.iat.ic.state.ICWorkerState;
+import com.urbanelf.iat.ic.ICWorkerState;
 import com.urbanelf.iat.proto.ClientPacket;
 import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.proto.ServerPacket;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
+import com.urbanelf.iat.util.LocalStorage;
 
 import org.json.JSONObject;
 
@@ -43,12 +44,20 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -58,6 +67,8 @@ import javax.swing.SwingUtilities;
 
 public class WorkerFrame extends JFrame {
     private static final String TAG = WorkerFrame.class.getSimpleName();
+
+    private static final String LS_IGNORE_CHROMEDRIVER_NOTICE = "ignore_chromedriver_notice";
 
     private final IC ic;
     private final WorkerType workerType;
@@ -78,6 +89,30 @@ public class WorkerFrame extends JFrame {
         this.workerType = workerType;
 
         serverListener = new PythonServer.ServerListener() {
+            private final Pattern VERSION_REGEX = Pattern.compile("(?i)chromedriver.*?version (\\d+(?:\\.\\d+)*).*?browser version is (\\d+(?:\\.\\d+)*)",
+                    Pattern.DOTALL);
+
+            private final JPanel startupPanel;
+            private final JCheckBox dontShowAgain;
+
+            {
+                startupPanel = new JPanel();
+                startupPanel.setLayout(new BoxLayout(startupPanel, BoxLayout.Y_AXIS));
+
+                startupPanel.add(new JLabel("""
+                                            <html>
+                                            This tool uses its own session of Chrome (ChromeDriver)<br>
+                                            to emulate the Chrome browser.<br><br>
+                                            
+                                            To avoid issues, please don’t interact with the window<br>
+                                            unless prompted, or update Chrome while this tool is running.
+                                            </html>
+                                            """));
+                startupPanel.add(Box.createVerticalStrut(16));
+                dontShowAgain = new JCheckBox("Don't show again");
+                startupPanel.add(dontShowAgain);
+            }
+
             @Override
             public void packetReceived(ServerPacket packet) {
                 if (workerId != null && !packet.getWorkerId().equals(workerId))
@@ -86,37 +121,82 @@ public class WorkerFrame extends JFrame {
                 try {
                     switch (packet.getSharedAction()) {
                         case UUID_AVAILABLE -> workerId = (String) packet.getData().get("uuid");
+                        case CHROMEDRIVER_STARTED -> {
+                            if (!LocalStorage.getJsonObject().has(LS_IGNORE_CHROMEDRIVER_NOTICE)) {
+                                // Reset checkbox
+                                dontShowAgain.setSelected(false);
+                                // Show dialog
+                                SwingUtilities.invokeLater(() -> {
+                                    final String title = "Before you begin...";
+                                    final Object[] options = {"Got it!"};
+
+                                    final JOptionPane optionPane = new JOptionPane(
+                                            startupPanel,
+                                            JOptionPane.INFORMATION_MESSAGE,
+                                            JOptionPane.DEFAULT_OPTION,
+                                            null,
+                                            options,
+                                            options[0]
+                                    );
+
+                                    final JDialog dialog = optionPane.createDialog(WorkerFrame.this, title);
+                                    dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                                    dialog.setModal(false); // non-blocking
+                                    optionPane.addPropertyChangeListener(evt -> {
+                                        final String prop = evt.getPropertyName();
+
+                                        if (evt.getSource() == optionPane && JOptionPane.VALUE_PROPERTY.equals(prop)) {
+                                            if (dontShowAgain.isSelected()) {
+                                                LocalStorage.getJsonObject().put(LS_IGNORE_CHROMEDRIVER_NOTICE, true);
+                                                LocalStorage.serialize();
+                                            }
+                                        }
+                                    });
+                                    dialog.setVisible(true);
+                                });
+                            }
+                        }
                         case CHROMEDRIVER_ERROR -> {
-                            final String stacktrace = (String) packet.getData().get("stacktrace");
-
-                            // Network failure
-                            final String networkText = """
-                                    IAT failed to start chromedriver.
-                                    
-                                    Please verify that you're connected to the internet, and try again.
-                                    
-                                    """;
-
-                            // Fallback (Version or exe issue)
-                            final String link = "https://www.google.com/chrome/";
-
-                            final String generalText = "IAT failed to start chromedriver.\n\n"
-                                    + " - Please verify you have Chrome installed on your machine, and try again.\n"
-                                    + "   Download at: " + link + "\n"
-                                    + " - If you have any questions, feel free to contact the developer:"
-                                    + "   (Help -> Report Bug";
+                            final String stacktrace = ((String) packet.getData().get("stacktrace"))
+                                    .toLowerCase();
 
                             // Determine exception
                             final String text;
                             final String[] options;
                             final Runnable okAction;
-                            if (stacktrace.contains("Network is unreachable")) {
-                                options = new String[] {"Close", "OK"};
-                                text = networkText;
-                                okAction = () -> {};
+                            if (stacktrace.contains("network is unreachable")) {
+                                options = new String[] {"OK"};
+                                text = """
+                                    IAT failed to start chromedriver.
+                                    
+                                    Please verify that you're connected to the internet, and try again.
+                                    """;
+                                okAction = () -> {
+                                };
+                            } else if (stacktrace.contains("this version of chromedriver only supports")) {
+                                options = new String[] {"Close"};
+                                // Extract versions
+                                String driverVersion = "Unknown";
+                                String browserVersion = "Unknown";
+                                final Matcher matcher = VERSION_REGEX.matcher(stacktrace);
+                                if (matcher.find()) {
+                                    driverVersion = matcher.group(1);
+                                    browserVersion = matcher.group(2);
+                                }
+                                text = "Your computer's version of Chrome appears to be out of date.\n"
+                                        + "Please update it, and try again.\n\n"
+                                        + "Browser version: " + browserVersion + "\n"
+                                        + "ChromeDriver version: " + driverVersion;
+                                okAction = () -> {
+                                };
                             } else {
-                                options = new String[] {"Close", "Open Link"};
-                                text = generalText;
+                                options = new String[] {"Open Link", "Close"};
+                                final String link = "https://www.google.com/chrome/";
+                                text = "IAT failed to start chromedriver.\n\n"
+                                        + " - Please verify you have Chrome installed on your machine, and try again.\n"
+                                        + "   Download at: " + link + "\n"
+                                        + " - If you have any questions, feel free to contact the developer:\n"
+                                        + "   (Help -> Report Bug)";
                                 okAction = () -> {
                                     try {
                                         Desktop.getDesktop().browse(URI.create(link));
@@ -134,9 +214,9 @@ public class WorkerFrame extends JFrame {
                                         JOptionPane.ERROR_MESSAGE,
                                         null,
                                         options,
-                                        options[1]);
+                                        options[0]);
 
-                                if (n == 1)
+                                if (n == 0)
                                     okAction.run();
 
                                 // Destroy frame
@@ -145,19 +225,7 @@ public class WorkerFrame extends JFrame {
                         }
                         case STATE_CHANGED -> {
                             final ICWorkerState state = new ICWorkerState((JSONObject) packet.getData().get("state"));
-
-                            SwingUtilities.invokeLater(() -> {
-                                stateNote.setText(state.getNote());
-                                stateHint.setText(state.getHint());
-                                statePanelWrapper.removeAll();
-                                if (state.isProgressive()) {
-                                    stateProgress.setIndeterminate(state.isIndeterminate());
-                                    statePanelWrapper.add(progressiveStatePanel);
-                                } else {
-                                    layoutSelectiveStatePanel(state);
-                                    statePanelWrapper.add(selectiveStatePanel);
-                                }
-                            });
+                            SwingUtilities.invokeLater(() -> setState(state));
                         }
                         case PROGRESS_UPDATE -> {
                             final BigDecimal object = (BigDecimal) packet.getData().get("progress");
@@ -235,6 +303,9 @@ public class WorkerFrame extends JFrame {
 
         /////////////////////////////////////////////////////////////
 
+        // Set initial state
+        setState(ICWorkerState.CONNECTING);
+
         // Start worker
         PythonServer.writePacket(new ClientPacket(ClientSA.DISPATCH_WORKER)
                 .addData("ic", ic.toJson())
@@ -245,6 +316,19 @@ public class WorkerFrame extends JFrame {
         SwingUtilities.updateComponentTreeUI(this);
         SwingUtilities.updateComponentTreeUI(progressiveStatePanel);
         SwingUtilities.updateComponentTreeUI(selectiveStatePanel);
+    }
+
+    private void setState(ICWorkerState state) {
+        stateNote.setText(state.getNote());
+        stateHint.setText(state.getHint());
+        statePanelWrapper.removeAll();
+        if (state.isProgressive()) {
+            stateProgress.setIndeterminate(state.isIndeterminate());
+            statePanelWrapper.add(progressiveStatePanel);
+        } else {
+            layoutSelectiveStatePanel(state);
+            statePanelWrapper.add(selectiveStatePanel);
+        }
     }
 
     private JPanel layoutProgressiveStatePanel() {

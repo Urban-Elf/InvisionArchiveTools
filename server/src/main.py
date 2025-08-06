@@ -37,6 +37,7 @@ import sys
 import uuid
 import threading
 from . import util
+import undetected_chromedriver
 from . import shared_constants
 from .worker import ic_worker
 from .worker.v4 import messenger_worker
@@ -155,7 +156,7 @@ def main(args: list[str]):
         SINGLE_WORKER = True
 
     util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi.where())
-
+    util.log(util.LogLevel.INFO, "ChromeDriver path: " + undetected_chromedriver.find_chrome_executable())
     util.log(util.LogLevel.INFO, "IAT server started successfully.")
     if DEBUG:
         util.log(util.LogLevel.INFO, "Debug mode is enabled.")

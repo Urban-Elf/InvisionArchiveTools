@@ -21,6 +21,7 @@ package com.urbanelf.iat.proto.constants;
 
 public enum ServerSA {
     UUID_AVAILABLE,
+    CHROMEDRIVER_STARTED,
     CHROMEDRIVER_ERROR,
     STATE_CHANGED,
     PROGRESS_UPDATE,

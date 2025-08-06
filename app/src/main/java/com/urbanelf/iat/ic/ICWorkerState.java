@@ -17,7 +17,7 @@
  * along with this program. If not, see https://www.gnu.org/licenses/.
  */
 
-package com.urbanelf.iat.ic.state;
+package com.urbanelf.iat.ic;
 
 import com.urbanelf.iat.proto.constants.ButtonCallbackSA;
 
@@ -25,10 +25,20 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class ICWorkerState {
+    public static final ICWorkerState CONNECTING = new ICWorkerState(
+            "Connecting to ChromeDriver...", "This may take a while on the first run.", null, true);
+
     private final String note;
     private final String hint;
     private final ButtonConfig[] buttonConfigs;
     private final boolean indeterminate;
+
+    public ICWorkerState(String note, String hint, ButtonConfig[] buttonConfigs, boolean indeterminate) {
+        this.note = note;
+        this.hint = hint;
+        this.buttonConfigs = buttonConfigs;
+        this.indeterminate = indeterminate;
+    }
 
     public ICWorkerState(JSONObject jsonObject) {
         note = jsonObject.getString("note");
