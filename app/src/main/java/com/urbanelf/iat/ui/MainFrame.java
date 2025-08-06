@@ -178,31 +178,30 @@ public class MainFrame extends JFrame {
         try {
             // LS_CURRENT_URL
             final AtomicReference<String> serialCurrentRootUrl = new AtomicReference<>();
-            try {
+            if (LocalStorage.getJsonObject().has(LS_CURRENT_URL))
                 serialCurrentRootUrl.set(LocalStorage.getJsonObject().getJSONObject(LS_CURRENT_URL).getString("root_url"));
-            } catch (JSONException e) {
-                Core.info(TAG,  "LS_CURRENT_URL not found/invalid in LocalStorage map");
-            }
 
-            final AtomicReference<IC> serialCurrentIc = new AtomicReference<>();
-            LocalStorage.getJsonObject().getJSONArray(LS_COMMUNITY_URLS).forEach(object -> {
-                try {
-                    if (object instanceof JSONObject jsonObject) {
-                        // Ignore malformed URLs
-                        if (jsonObject.get("url") instanceof String url && URLUtils.isURLHTTP(url)) {
-                            final IC ic = Objects.requireNonNull(Version.ofInteger((int) jsonObject.get("version"))).getIcClass()
-                                    .getDeclaredConstructor(String.class).newInstance(URLUtils.normalizeURLString(url));
-                            if (ic.getRootUrl().equals(serialCurrentRootUrl.get()))
-                                serialCurrentIc.set(ic);
-                            communityListModel.addElement(ic);
+            if (LocalStorage.getJsonObject().has(LS_COMMUNITY_URLS)) {
+                final AtomicReference<IC> serialCurrentIc = new AtomicReference<>();
+                LocalStorage.getJsonObject().getJSONArray(LS_COMMUNITY_URLS).forEach(object -> {
+                    try {
+                        if (object instanceof JSONObject jsonObject) {
+                            // Ignore malformed URLs
+                            if (jsonObject.get("url") instanceof String url && URLUtils.isURLHTTP(url)) {
+                                final IC ic = Objects.requireNonNull(Version.ofInteger((int) jsonObject.get("version"))).getIcClass()
+                                        .getDeclaredConstructor(String.class).newInstance(URLUtils.normalizeURLString(url));
+                                if (ic.getRootUrl().equals(serialCurrentRootUrl.get()))
+                                    serialCurrentIc.set(ic);
+                                communityListModel.addElement(ic);
+                            }
                         }
+                    } catch (Exception e) {
+                        Core.error(TAG, "Error while attempting to restore persistent data", e);
                     }
-                } catch (Exception e) {
-                    Core.error(TAG, "Error while attempting to restore persistent data", e);
-                }
-            });
-            if (serialCurrentIc.get() != null)
-                currentCommunity.setSelectedItem(serialCurrentIc.get());
+                });
+                if (serialCurrentIc.get() != null)
+                    currentCommunity.setSelectedItem(serialCurrentIc.get());
+            }
         } catch (Exception e) {
             Core.error(TAG, "Error while attempting to restore persistent data", e);
         }
