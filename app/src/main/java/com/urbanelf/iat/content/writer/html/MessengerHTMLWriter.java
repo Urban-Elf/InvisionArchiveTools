@@ -78,7 +78,7 @@ public class MessengerHTMLWriter extends HTMLWriter {
                 .sum();
         final String statistics = userData.size()
                 + " participant" + (userData.size() == 1 ? "" : "s")
-                + " • " + NumberUtils.formatDelimiter(totalPosts) + " posts";
+                + " \u2022 " + NumberUtils.formatDelimiter(totalPosts) + " posts";
         // Set variable
         context.setVariable("stats", statistics);
 
