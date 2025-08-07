@@ -194,8 +194,6 @@ class MessengerWorkerV4(IC4Worker):
                 post.convert_content(self.ic)
                 # Add post to page
                 page_posts.append(post)
-                
-                util.log(util.LogLevel.DEBUG, f"Found src post: " + util.to_json(post.__serialize__()))
 
                 # User data (if not already in members section)
                 if userdata_from_posts and not author_str in messenger.user_data:

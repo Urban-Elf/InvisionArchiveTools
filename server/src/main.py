@@ -157,6 +157,7 @@ def main(args: list[str]):
 
     util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi.where())
     util.log(util.LogLevel.INFO, "ChromeDriver path: " + undetected_chromedriver.find_chrome_executable())
+
     util.log(util.LogLevel.INFO, "IAT server started successfully.")
     if DEBUG:
         util.log(util.LogLevel.INFO, "Debug mode is enabled.")
@@ -168,8 +169,5 @@ def main(args: list[str]):
     for worker_id in ACTIVE_WORKERS:
         worker: ic_worker.ICWorker = get_worker_by_uuid(worker_id)
         util.log(util.LogLevel.INFO, "KILLSIG >> " + worker_id)
-        worker.shutdown()
+        worker.shutdown(callback=False)
         worker.join()
-
-if __name__ == "__main__":
-    main()

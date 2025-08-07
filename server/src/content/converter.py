@@ -15,9 +15,12 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from datetime import datetime
 from ..worker.ic import IC
+from .. import util
+
+MAX_QUOTE_DEPTH = 20
 
 class ContentConverter:
 	def __init__(self, html: str, ic: IC):
@@ -34,11 +37,16 @@ class ContentConverter:
 
 	def convert_quotes(self) -> str:
 		quotes = self.soup.find_all("blockquote", class_="ipsQuote")
-		for quote in quotes:
+		for idx, quote in enumerate(quotes):
+			util.log(util.LogLevel.DEBUG, f"Processing quote [{idx}]")
 			self._convert_quote(quote)
 		return str(self.soup)
 
-	def _convert_quote(self, blockquote):
+	def _convert_quote(self, blockquote: Tag, depth: int=0):
+		if depth >= MAX_QUOTE_DEPTH:
+			util.log(util.LogLevel.WARNING, f"Max quote depth ({MAX_QUOTE_DEPTH}) exceeded -- skipping further nesting.")
+			return
+
 		timestamp = blockquote.get("data-ipsquote-timestamp")
 		username = blockquote.get("data-ipsquote-username")
 		user_id = blockquote.get("data-ipsquote-userid")
@@ -94,10 +102,15 @@ class ContentConverter:
 				# If it's a nested ipsQuote blockquote, convert recursively
 				if isinstance(child, type(self.soup.new_tag("div"))) and child.name == "blockquote":
 					if "ipsQuote" in child.get("class", []):
-						nested_html = ContentConverter(str(child), self.ic).convert_quotes()
-						nested_soup = BeautifulSoup(nested_html, "html.parser")
-						for elem in nested_soup.contents:
-							contents.append(elem)
+						#util.log(util.LogLevel.DEBUG, "Nested ipsQuote found, converting recursively.")
+						#nested_html = ContentConverter(str(child), self.ic, depth + 1).convert_quotes()
+						#nested_soup = BeautifulSoup(nested_html, "html.parser")
+						#for i, elem in enumerate(nested_soup.contents):
+							#util.log(util.LogLevel.DEBUG, f"Appending nested element [{i}] at depth {self.depth + 1}")
+							#contents.append(elem)
+						util.log(util.LogLevel.DEBUG, f"Converting nested quote [depth={depth+1}]")
+						self._convert_quote(child, depth=depth+1)
+						contents.append(child)
 						continue
 
 				# Otherwise, append child as-is (preserve formatting)

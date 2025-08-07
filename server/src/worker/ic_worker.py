@@ -153,12 +153,12 @@ class ICWorker(threading.Thread):
     def on_shutdown():
         pass
 
-    def shutdown(self):
+    def shutdown(self, callback: bool=True):
         self.shutdown_event.set()
         if (self.driver is not None):
             self.driver.quit()
-            self.driver.close()
-        self.on_shutdown()
+        if callback:
+            self.on_shutdown()
 
     def set_client_object(self, client_object):
         self.client_object = client_object
