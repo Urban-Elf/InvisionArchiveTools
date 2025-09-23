@@ -19,13 +19,11 @@
 
 package com.urbanelf.iat.content.writer.html;
 
-import com.urbanelf.iat.Core;
 import com.urbanelf.iat.content.model.Content;
 import com.urbanelf.iat.content.model.PostContent;
 import com.urbanelf.iat.content.model.Post;
 import com.urbanelf.iat.content.model.UserData;
 import com.urbanelf.iat.util.NumberUtils;
-import com.urbanelf.iat.util.ResourceUtils;
 
 import org.json.JSONObject;
 import org.thymeleaf.TemplateEngine;
@@ -36,6 +34,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +57,7 @@ public class MessengerHTMLWriter extends HTMLWriter {
         dstDirectory.mkdirs();
         final File resDirectory = new File(dstDirectory, "res");
         resDirectory.mkdir();
+        final Path resPath = resDirectory.toPath();
         final File pageDirectory = new File(dstDirectory, "page");
         pageDirectory.mkdir();
 
@@ -67,6 +67,9 @@ public class MessengerHTMLWriter extends HTMLWriter {
         // Generic access fields
         final ArrayList<ArrayList<? extends Post>> pages = postContent.getPages();
         final HashMap<String, UserData> userData = postContent.getUserData();
+
+        // Process user data (localize avatar paths, etc)
+        processUserData(userData, resPath);
 
         // Populate generic fields
         context.setVariable("title", postContent.getTitle());
@@ -115,15 +118,7 @@ public class MessengerHTMLWriter extends HTMLWriter {
         }
 
         // Copy resources (COMMENT OUT WHILE DEBUGGING JS/CSS)
-        try {
-            final List<String> index = ResourceUtils.loadResourceIndex(RES_PATH, "index.txt");
-            ResourceUtils.copyResources(RES_PATH, index, resDirectory.toPath());
-            //FileTree.copyDir(Path.of(ClassLoader.getSystemResource(RES_PATH).toURI()),
-            //        resDirectory.toPath());
-        } catch (IOException e) {
-            Core.fatal(TAG, "Failed to resolve internal resources", e);
-            throw new RuntimeException(e);
-        }
+        copyResources(RES_PATH, resPath);
 
         // Render template
         try (Writer writer = new FileWriter(new File(dstDirectory, dst.getName()),

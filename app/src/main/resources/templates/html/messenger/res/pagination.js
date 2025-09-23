@@ -67,11 +67,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 50);
 
-            window.addEventListener('scroll', () => {
+            window.location.href = nextPage;
+
+            /*window.addEventListener('scroll', () => {
                 if (window.scrollY === 0) {
                     window.location.href = nextPage;
                 }
-            });
+            });*/
         } else {
             window.location.href = nextPage;
         }

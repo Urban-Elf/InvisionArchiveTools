@@ -23,7 +23,7 @@ import org.json.JSONObject;
 
 public class UserData {
     private final String profileUrl;
-    private final String avatarUrl;
+    private String avatarUrl;
     private final String group;
     private final String groupIconUrl;
 
@@ -40,6 +40,10 @@ public class UserData {
 
     public String getAvatarUrl() {
         return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public String getGroup() {

@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 public class URLUtils {
     private static final Pattern PROTOCOL_PATTERN = Pattern.compile("^(https?://)?([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}/?$", Pattern.CASE_INSENSITIVE);
 
+
     public static boolean isURLHTTP(String url) {
         return PROTOCOL_PATTERN.matcher(url).find();
     }
@@ -38,5 +39,13 @@ public class URLUtils {
         if (url.endsWith("/"))
             url = url.substring(0, url.length()-1);
         return url;
+    }
+
+    public static String getResourceName(String url) {
+        // Strip query and fragment first
+        String clean = url.replaceFirst("[?#].*$", "");
+        // Extract substring after last '/'
+        int lastSlash = clean.lastIndexOf('/');
+        return (lastSlash >= 0) ? clean.substring(lastSlash + 1) : clean;
     }
 }
