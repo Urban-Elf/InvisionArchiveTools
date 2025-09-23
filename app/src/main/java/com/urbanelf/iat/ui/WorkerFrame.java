@@ -104,7 +104,7 @@ public class WorkerFrame extends JFrame {
                                             This tool uses its own session of Chrome (ChromeDriver)<br>
                                             to emulate the Chrome browser.<br><br>
                                             
-                                            To avoid issues, please don’t interact with the window<br>
+                                            To avoid issues, please don't interact with the window<br>
                                             unless prompted, or update Chrome while this tool is running.
                                             </html>
                                             """));
