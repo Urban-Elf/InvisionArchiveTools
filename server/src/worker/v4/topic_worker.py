@@ -20,8 +20,6 @@ from ...worker.state.worker_state import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
-from ...worker.ic_exceptions import ICWorkerException
-from ...worker.ic_chromedriver import IC_ChromeDriver
 from ...content.content import Post, UserData
 from ...content.topic import Topic
 from ...content.writers import JSONWriter
@@ -36,9 +34,6 @@ class TopicWorkerV4State:
     ANALYZING = ICWorkerState(note="Preparing...")
     INVALID_TOPIC = ICWorkerState("No topic open. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
-    ARCHIVING = ICWorkerState(note="Archiving...",
-                              hint="Please do not interfere with the browser.",
-                              indeterminate=False)
 
 class TopicWorkerV4(IC4Worker):
     def __init__(self, worker_id, ic):
@@ -112,7 +107,7 @@ class TopicWorkerV4(IC4Worker):
             util.log(util.LogLevel.WARNING, "No pagination found, defaulting to single-paged topic.")
 
         # Archive
-        worker.set_state(TopicWorkerV4State.ARCHIVING)
+        worker.set_state(SharedState.ARCHIVING)
 
         # Get topic title
         title_str = "Invision Community Topic"

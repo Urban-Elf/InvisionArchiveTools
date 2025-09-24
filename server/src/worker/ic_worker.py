@@ -125,11 +125,11 @@ class ICWorker(threading.Thread):
                     self.set_state(SharedState.AUTH_REQUIRED)
 
                 # Validate session
-                self.set_state(SharedState.VALIDATING_SESSION)
+                self.set_state(SharedState.VALIDATING_AUTH)
                 try:
                     self.driver_await(EC.presence_of_element_located((By.CLASS_NAME, "elMobileDrawer__user-panel")), time=3)
                 except TimeoutException:
-                    self.set_state(SharedState.SESSION_INVALID)
+                    self.set_state(SharedState.AUTH_INVALID)
                     continue
                 # Valid session
                 break
@@ -138,7 +138,10 @@ class ICWorker(threading.Thread):
             self.execute()
         except BaseException:
             util.log(util.LogLevel.FATAL, "An internal error occurred: ", error_trace=True)
-            self.set_state(SharedState.INTERNAL_EXCEPTION)
+            if (traceback.format_exc().__contains__("InvalidSessionIdException")):
+                self.set_state(SharedState.SESSION_INTERRUPTED)
+            else:
+                self.set_state(SharedState.INTERNAL_EXCEPTION)
 
     def set_state(self, state: ICWorkerState):
         self.state = state

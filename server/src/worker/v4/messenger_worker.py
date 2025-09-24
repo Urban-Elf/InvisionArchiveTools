@@ -34,9 +34,6 @@ class MessengerWorkerV4State:
     ANALYZING = ICWorkerState(note="Preparing...")
     INVALID_MESSENGER = ICWorkerState("No messenger selected. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
-    ARCHIVING = ICWorkerState(note="Archiving...",
-                              hint="Please do not interfere with the browser.",
-                              indeterminate=False)
 
 class MessengerWorkerV4(IC4Worker):
     def __init__(self, worker_id, ic):
@@ -117,7 +114,7 @@ class MessengerWorkerV4(IC4Worker):
             util.log(util.LogLevel.WARNING, "No pagination found, defaulting to single-paged messenger.")
 
         # Archive
-        self.set_state(MessengerWorkerV4State.ARCHIVING)
+        self.set_state(SharedState.ARCHIVING)
 
         # Get messenger title
         title_str = "Invision Community Messenger"

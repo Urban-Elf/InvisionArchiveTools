@@ -55,9 +55,14 @@ class SharedState:
     AUTH_REQUIRED = ICWorkerState(note="Please sign in to continue.",
                                   hint="Sign in on the browser before pressing 'Next'",
                                   button_configs=[ButtonConfig("Next")])
-    VALIDATING_SESSION = ICWorkerState(note="Validating session...")
-    SESSION_INVALID = ICWorkerState(note="Session invalid. Please try again.",
+    VALIDATING_AUTH = ICWorkerState(note="Validating session...")
+    AUTH_INVALID = ICWorkerState(note="Session invalid. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
+    ARCHIVING = ICWorkerState(note="Archiving...",
+                              hint="Please do not interfere with the browser.",
+                              indeterminate=False)
+    SESSION_INTERRUPTED = ICWorkerState(note="Session interrupted. Please restart the task.",
+                                     button_configs=[ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)]),
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
                                        hint="Please notify the developer (Help -> Report Bug)",
                                        button_configs=[
