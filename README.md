@@ -92,7 +92,7 @@ To view it, open the file with the `.html` extension in a web browser of prefere
 
 ## How to Contribute
 
-Anybody can contribute to this tool by playing around with it, reporting bugs, or suggesting new features!
+Anybody can contribute to this tool by playing around with it, [reporting bugs](https://github.com/Urban-Elf/InvisionArchiveTools/issues/new?template=bug-report.yml), or [suggesting new features](https://github.com/Urban-Elf/InvisionArchiveTools/issues/new?template=feature.yml)!
 
 If you do, however, possess knowledge and experience with any of the languages used in the software, you can contact the developer via email at iat.legacy037@aleeas.com, and you can talk with him about contributions to the codebase.
 
