@@ -41,9 +41,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.WindowConstants;
 
-public class TOAFrame extends JFrame {
-    public TOAFrame() {
-        setTitle("IAT Terms of Agreement");
+public class TOSFrame extends JFrame {
+    public TOSFrame() {
+        setTitle("IAT Terms of Service");
         setResizable(false);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -53,11 +53,11 @@ public class TOAFrame extends JFrame {
         continueButton.addActionListener(e -> {
             accepted();
             originContinue.set(true);
-            dispatchEvent(new WindowEvent(TOAFrame.this, WindowEvent.WINDOW_CLOSING));
+            dispatchEvent(new WindowEvent(TOSFrame.this, WindowEvent.WINDOW_CLOSING));
         });
         continueButton.setEnabled(false);
 
-        final JCheckBox checkBox = new JCheckBox("On my honor as a child of God, I have read and agree to the terms above.");
+        final JCheckBox checkBox = new JCheckBox("On my honor as a child of God, I acknowledge that I have read and agree to the terms above.");
         checkBox.addItemListener(e -> {
             final boolean selected = e.getStateChange() == ItemEvent.SELECTED;
             continueButton.setEnabled(selected);
@@ -78,7 +78,7 @@ public class TOAFrame extends JFrame {
 
         final String termsHtml = "<html>" +
                 " <br>" +
-                " <b>Terms of Agreement</b><br>" +
+                " <b>Terms of Service Agreement</b><br>" +
                 " <br>" +
                 " <b>Effective Date:</b> 7/18/2025<br>" +
                 " <b>Application:</b> Invision Archive Tools (\"IAT\", \"the App\")<br>" +
@@ -135,7 +135,7 @@ public class TOAFrame extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         final JButton closeButton = new JButton("Close");
         closeButton.addActionListener(e -> {
-            dispatchEvent(new WindowEvent(TOAFrame.this, WindowEvent.WINDOW_CLOSING));
+            dispatchEvent(new WindowEvent(TOSFrame.this, WindowEvent.WINDOW_CLOSING));
         });
         buttonPanel.add(closeButton);
         if (PlatformUtils.getRunningPlatform() != PlatformUtils.Platform.Mac)

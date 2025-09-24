@@ -24,7 +24,7 @@ import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.content.writer.WriterDispatcher;
 import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.ui.MainFrame;
-import com.urbanelf.iat.ui.TOAFrame;
+import com.urbanelf.iat.ui.TOSFrame;
 import com.urbanelf.iat.util.ArrayUtils;
 import com.urbanelf.iat.util.Benchmark;
 import com.urbanelf.iat.util.DateUtils;
@@ -421,7 +421,7 @@ public class Core {
                 if (LocalStorage.getJsonObject().has(LS_AGREED_TO_TERMS)) {
                     new MainFrame(); // Automatically shows
                 } else {
-                    new TOAFrame() {
+                    new TOSFrame() {
                         @Override
                         protected void accepted() {
                             LocalStorage.getJsonObject().put(LS_AGREED_TO_TERMS, true);
