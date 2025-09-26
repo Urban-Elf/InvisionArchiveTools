@@ -97,13 +97,27 @@ jobs:
 
     - name: Build fatJar
       working-directory: app
-      run: ../gradlew fatJar
+      run: |
+        ../gradlew fatJar
+        mv app/build/libs/app.jar app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
 
     - name: Upload JAR
       uses: actions/upload-artifact@v4
       with:
-        name: iat-fatjar-${{ matrix.artifact_suffix }}
-        path: app/build/libs/app.jar
+        name: iat-${{ matrix.artifact_suffix }}
+        path: app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
+
+    - name: Read version
+      id: version
+      run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+
+    - name: Upload JAR to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        files: app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Phase C - Linux DEB Installer
   linux-installer:
