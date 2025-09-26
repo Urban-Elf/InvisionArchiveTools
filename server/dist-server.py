@@ -31,23 +31,40 @@ def ensure_venv():
         print(f"Warning: requirements file not found at {REQUIREMENTS}")
 
 def fix_macos_extensions():
-    """Ensure all .so/.dylib C-extensions are universal2 on macOS."""
+    """Ensure only actual C-extension binaries are universal2 on macOS."""
     if sys.platform != "darwin":
         return
 
+    import glob
+
     print("Checking macOS C-extension binaries for universal2 slices...")
-    site_packages = os.path.join(VENV_DIR, "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
-    for ext in glob.glob(f"{site_packages}/**/*.[sd]o", recursive=True):
+    site_packages = os.path.join(
+        VENV_DIR,
+        "lib",
+        f"python{sys.version_info.major}.{sys.version_info.minor}",
+        "site-packages",
+    )
+    for ext_path in glob.glob(f"{site_packages}/**/*.[sd]o", recursive=True):
         try:
-            out = subprocess.check_output(["lipo", "-info", ext], text=True).strip()
+            out = subprocess.check_output(["lipo", "-info", ext_path], text=True).strip()
             if "x86_64" not in out or "arm64" not in out:
-                # Reinstall the package containing this extension
-                pkg_dir = os.path.basename(os.path.dirname(ext))
+                pkg_dir = os.path.basename(os.path.dirname(ext_path))
                 print(f"⚡ Reinstalling {pkg_dir} as universal2 (missing slice)")
-                run([venv_python, "-m", "pip", "install",
-                     "--force-reinstall", "--no-cache-dir", "--only-binary=:all:", pkg_dir])
+                # Only attempt if the package actually exists on PyPI
+                try:
+                    run([
+                        venv_python,
+                        "-m", "pip", "install",
+                        "--force-reinstall",
+                        "--no-cache-dir",
+                        "--only-binary=:all:",
+                        pkg_dir
+                    ])
+                except subprocess.CalledProcessError:
+                    print(f"⚠ Skipping {pkg_dir}: not available on PyPI")
         except subprocess.CalledProcessError:
-            continue  # Skip non-lipo-compatible binaries
+            continue
+
 
 def build():
     # Read version
