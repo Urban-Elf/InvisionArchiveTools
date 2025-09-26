@@ -18,7 +18,7 @@ jobs:
           - os: windows-latest
             artifact_name: server-windows
             archive_cmd: 7z a -tzip server.zip server
-          - os: macos-latest
+          - os: macos-14
             artifact_name: server-macos
             archive_cmd: zip -r server.zip server
 
