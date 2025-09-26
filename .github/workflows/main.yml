@@ -30,7 +30,11 @@ jobs:
       - name: Build Python server
         working-directory: server
         run: |
-          python dist-server.py  # venv already exists, dist-server.py no longer creates it
+          python -m venv server/.venv
+          source server/.venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install -r server/requirements.txt
+          python dist-server.py
 
       - name: Archive server folder
         working-directory: server/dist
@@ -68,6 +72,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python -m venv server/.venv
           source server/.venv/bin/activate
           pip install --upgrade pip setuptools wheel
           pip install -r server/requirements.txt
