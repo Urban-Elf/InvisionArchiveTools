@@ -36,7 +36,7 @@ def build():
         version = f.read().strip()
 
     # Build with PyInstaller
-    run([
+    args = [
         venv_python, "-m", "PyInstaller", "bootstrap.py",
         "--name", MODULE_NAME,
         "--hidden-import", "bs4",
@@ -46,12 +46,14 @@ def build():
         "--log-level", "WARN",
         #"--debug", "imports",
         "--noconfirm"
-    ])
+    ]
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 
     # If on macOS, build as universal2
     if sys.platform == "darwin":
         args += ["--target-arch", "universal2"]
+
+    run(args)
 
     # Write metadata.json
     metadata_dir = os.path.join("dist", MODULE_NAME)
