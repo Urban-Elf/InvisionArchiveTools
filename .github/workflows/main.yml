@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  # Phase A - Build server
+  # Phase A - Build server (Linux, Windows)
   build-server:
     strategy:
       matrix:
@@ -18,10 +18,6 @@ jobs:
           - os: windows-latest
             artifact_name: server-windows
             archive_cmd: 7z a -tzip server.zip server
-          - os: macos-14
-            artifact_name: server-macos
-            archive_cmd: zip -r server.zip server
-
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -34,22 +30,7 @@ jobs:
       - name: Build Python server
         working-directory: server
         run: |
-          python dist-server.py
-
-      - name: Verify Universal2 Binary
-        if: matrix.os == 'macos-14'
-        run: |
-          echo "Checking server binary architecture..."
-          file server/dist/server/server
-          ARCHS=$(lipo -info server/dist/server/server | awk -F': ' '{print $NF}')
-          echo "Detected architectures: $ARCHS"
-
-          if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
-            echo "❌ ERROR: Universal2 binary missing x86_64 or arm64 slice!"
-            exit 1
-          fi
-
-          echo "✅ Universal2 binary looks good."
+          python dist-server.py  # venv already exists, dist-server.py no longer creates it
 
       - name: Archive server folder
         working-directory: server/dist
@@ -61,9 +42,105 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: server/dist/server.zip
 
+  # Phase A - Build server (macOS universal2)
+  build-server-macos:
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+        include:
+          - arch: x86_64
+            runner: macos-13
+          - arch: arm64
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    env:
+      PATCH_PACKAGES: |
+        Cython
+        psutil
+        websockets
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          source server/.venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install -r server/requirements.txt
+
+      - name: Patch C-extensions for ${{ matrix.arch }}
+        run: |
+          source server/.venv/bin/activate
+          for pkg in $PATCH_PACKAGES; do
+            pip install --force-reinstall --no-cache-dir --only-binary=:all: $pkg
+          done
+
+      - name: Upload patched artifacts (x86_64 only)
+        if: matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-x86_64
+          path: |
+            server/.venv/lib/python3.12/site-packages/Cython
+            server/.venv/lib/python3.12/site-packages/psutil
+            server/.venv/lib/python3.12/site-packages/websockets
+
+      - name: Download x86_64 artifacts (arm64 only)
+        if: matrix.arch == 'arm64'
+        uses: actions/download-artifact@v4
+        with:
+          name: patched-x86_64
+          path: patched-x86_64
+
+      - name: Merge x86_64 artifacts into arm64 (arm64 only)
+        if: matrix.arch == 'arm64'
+        run: |
+          source server/.venv/bin/activate
+          for pkg in $PATCH_PACKAGES; do
+            pkg_dir="server/.venv/lib/python3.12/site-packages/$pkg"
+            x86_dir="patched-x86_64/$pkg"
+            if [ -d "$x86_dir" ]; then
+              find "$pkg_dir" -name '*.so' -o -name '*.dylib' | while read f; do
+                lipo -create "$f" "$x86_dir/$(basename $f)" -output "$f"
+              done
+            fi
+          done
+
+      - name: Build server (PyInstaller)
+        working-directory: server
+        run: python dist-server.py
+
+      - name: Verify Universal2 Binary
+        run: |
+          echo "Checking server binary architecture..."
+          file server/dist/server/server
+          ARCHS=$(lipo -info server/dist/server/server | awk -F': ' '{print $NF}')
+          echo "Detected architectures: $ARCHS"
+          if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
+            echo "❌ ERROR: Universal2 binary missing x86_64 or arm64 slice!"
+            exit 1
+          fi
+          echo "✅ Universal2 binary looks good."
+
+      - name: Archive server folder
+        working-directory: server/dist
+        run: zip -r server.zip server
+
+      - name: Upload server.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-macos
+          path: server/dist/server.zip
+
   # Phase B - Build app
   build-app:
-    needs: build-server
+    needs:
+      - build-server
+      - build-server-macos
     strategy:
       matrix:
         include:
