@@ -49,6 +49,10 @@ def build():
     ])
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 
+    # If on macOS, build as universal2
+    if sys.platform == "darwin":
+        args += ["--target-arch", "universal2"]
+
     # Write metadata.json
     metadata_dir = os.path.join("dist", MODULE_NAME)
     os.makedirs(metadata_dir, exist_ok=True)

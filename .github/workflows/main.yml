@@ -18,7 +18,7 @@ jobs:
           - os: windows-latest
             artifact_name: server-windows
             archive_cmd: 7z a -tzip server.zip server
-          - os: macos-latest
+          - os: macos-14
             artifact_name: server-macos
             archive_cmd: zip -r server.zip server
 
@@ -35,6 +35,22 @@ jobs:
       working-directory: server
       run: |
         python dist-server.py
+
+    - name: Verify Universal2 Binary
+      if: matrix.os == 'macos'
+      run: |
+        echo "Checking server binary architecture..."
+        file server/dist/server/server
+        ARCHS=$(lipo -info server/dist/server/server | awk -F': ' '{print $NF}')
+        echo "Detected architectures: $ARCHS"
+
+        if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
+          echo "❌ ERROR: Universal2 binary missing x86_64 or arm64 slice!"
+          exit 1
+        fi
+
+        echo "✅ Universal2 binary looks good."
+
 
     - name: Archive server folder
       working-directory: server/dist
