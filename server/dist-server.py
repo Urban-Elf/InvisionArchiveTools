@@ -64,7 +64,7 @@ def build():
     print(f"Wrote {metadata_path}")
 
 def main():
-    #ensure_venv()
+    ensure_venv()
     build()
     print("Build complete.")
 
