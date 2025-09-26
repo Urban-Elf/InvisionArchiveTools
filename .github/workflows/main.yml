@@ -139,7 +139,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar-linux
+        name: iat-linux
         path: app/build/libs
 
     - name: Read version
@@ -162,7 +162,7 @@ jobs:
         jpackage \
           --type deb \
           --input app/build/libs \
-          --main-jar app.jar \
+          --main-jar iat-linux.jar \
           --main-class com.urbanelf.iat.Core \
           --runtime-image jre \
           --resource-dir jpackage/linux/res \
@@ -216,7 +216,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar-windows
+        name: iat-windows
         path: app\build\libs
 
     - name: Download Windows server.zip to resource directory
@@ -240,7 +240,7 @@ jobs:
         jpackage `
           --type msi `
           --input app\build\libs `
-          --main-jar app.jar `
+          --main-jar iat-windows.jar `
           --main-class com.urbanelf.iat.Core `
           --runtime-image jre `
           --dest output `
@@ -281,7 +281,7 @@ jobs:
     - name: Download fatJar
       uses: actions/download-artifact@v4
       with:
-        name: iat-fatjar-macos
+        name: iat-macos
         path: app/build/libs
 
     - name: Read version
@@ -293,7 +293,7 @@ jobs:
         jpackage \
           --type dmg \
           --input app/build/libs \
-          --main-jar app.jar \
+          --main-jar iat-macos.jar \
           --main-class com.urbanelf.iat.Core \
           --runtime-image jre \
           --dest output \
