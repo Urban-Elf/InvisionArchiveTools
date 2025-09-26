@@ -96,9 +96,8 @@ jobs:
         restore-keys: gradle-${{ runner.os }}-
 
     - name: Build fatJar
-      working-directory: app
       run: |
-        ../gradlew fatJar
+        ./gradlew fatJar
         mv app/build/libs/app.jar app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
 
     - name: Upload JAR
