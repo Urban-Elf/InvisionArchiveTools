@@ -51,7 +51,6 @@ jobs:
 
         echo "✅ Universal2 binary looks good."
 
-
     - name: Archive server folder
       working-directory: server/dist
       run: ${{ matrix.archive_cmd }}
