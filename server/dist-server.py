@@ -49,9 +49,9 @@ def build():
     ]
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 
-    # If on macOS, build as universal2
+    # If on macOS, build as x86_64
     if sys.platform == "darwin":
-        args += ["--target-arch", "universal2"]
+        args += ["--target-arch", "x86_64"]
 
     run(args)
 
