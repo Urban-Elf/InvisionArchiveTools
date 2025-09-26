@@ -108,6 +108,7 @@ jobs:
 
     - name: Read version
       id: version
+      shell: bash
       run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
     - name: Upload JAR to GitHub Release
