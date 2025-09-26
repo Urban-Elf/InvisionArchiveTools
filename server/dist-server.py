@@ -3,12 +3,12 @@ import subprocess
 import sys
 import os
 import json
+import glob
 
 MODULE_NAME = "server"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VENV_DIR = os.path.join(os.path.dirname(__file__), ".venv")
 REQUIREMENTS = os.path.join(os.path.dirname(__file__), "requirements.txt")
-#SPEC_FILE = os.path.join(os.path.dirname(__file__), f"{MODULE_NAME}.spec")
 
 # Determine venv python path
 venv_python = os.path.join(VENV_DIR, "Scripts", "python.exe") if os.name == "nt" else os.path.join(VENV_DIR, "bin", "python")
@@ -22,18 +22,40 @@ def ensure_venv():
         print("Creating virtual environment...")
         run([sys.executable, "-m", "venv", VENV_DIR])
 
-    # Install requirements
+    # Upgrade pip/setuptools/wheel and install requirements
     if os.path.isfile(REQUIREMENTS):
         print("Installing dependencies...")
-        run([venv_python, "-m", "pip", "install", "--upgrade", "pip"])
+        run([venv_python, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"])
         run([venv_python, "-m", "pip", "install", "-r", REQUIREMENTS])
     else:
         print(f"Warning: requirements file not found at {REQUIREMENTS}")
+
+def fix_macos_extensions():
+    """Ensure all .so/.dylib C-extensions are universal2 on macOS."""
+    if sys.platform != "darwin":
+        return
+
+    print("Checking macOS C-extension binaries for universal2 slices...")
+    site_packages = os.path.join(VENV_DIR, "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
+    for ext in glob.glob(f"{site_packages}/**/*.[sd]o", recursive=True):
+        try:
+            out = subprocess.check_output(["lipo", "-info", ext], text=True).strip()
+            if "x86_64" not in out or "arm64" not in out:
+                # Reinstall the package containing this extension
+                pkg_dir = os.path.basename(os.path.dirname(ext))
+                print(f"⚡ Reinstalling {pkg_dir} as universal2 (missing slice)")
+                run([venv_python, "-m", "pip", "install",
+                     "--force-reinstall", "--no-cache-dir", "--only-binary=:all:", pkg_dir])
+        except subprocess.CalledProcessError:
+            continue  # Skip non-lipo-compatible binaries
 
 def build():
     # Read version
     with open(os.path.join(PROJECT_ROOT, "VERSION")) as f:
         version = f.read().strip()
+
+    # Fix macOS C-extensions if needed
+    fix_macos_extensions()
 
     # Build with PyInstaller
     args = [
@@ -44,12 +66,8 @@ def build():
         "--hidden-import", "certifi",
         "--collect-all", "certifi",
         "--log-level", "WARN",
-        #"--debug", "imports",
         "--noconfirm"
     ]
-    #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
-
-    # If on macOS, build as universal2
     if sys.platform == "darwin":
         args += ["--target-arch", "universal2"]
 

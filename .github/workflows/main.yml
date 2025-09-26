@@ -24,47 +24,46 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-    - name: Build Python server
-      working-directory: server
-      run: |
-        python dist-server.py
+      - name: Build Python server
+        working-directory: server
+        run: |
+          python dist-server.py
 
-    - name: Verify Universal2 Binary
-      if: matrix.os == 'macos'
-      run: |
-        echo "Checking server binary architecture..."
-        file server/dist/server/server
-        ARCHS=$(lipo -info server/dist/server/server | awk -F': ' '{print $NF}')
-        echo "Detected architectures: $ARCHS"
+      - name: Verify Universal2 Binary
+        if: matrix.os == 'macos-14'
+        run: |
+          echo "Checking server binary architecture..."
+          file server/dist/server/server
+          ARCHS=$(lipo -info server/dist/server/server | awk -F': ' '{print $NF}')
+          echo "Detected architectures: $ARCHS"
 
-        if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
-          echo "❌ ERROR: Universal2 binary missing x86_64 or arm64 slice!"
-          exit 1
-        fi
+          if [[ "$ARCHS" != *"x86_64"* ]] || [[ "$ARCHS" != *"arm64"* ]]; then
+            echo "❌ ERROR: Universal2 binary missing x86_64 or arm64 slice!"
+            exit 1
+          fi
 
-        echo "✅ Universal2 binary looks good."
+          echo "✅ Universal2 binary looks good."
 
-    - name: Archive server folder
-      working-directory: server/dist
-      run: ${{ matrix.archive_cmd }}
+      - name: Archive server folder
+        working-directory: server/dist
+        run: ${{ matrix.archive_cmd }}
 
-    - name: Upload server.zip
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: server/dist/server.zip
+      - name: Upload server.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: server/dist/server.zip
 
   # Phase B - Build app
-  build:
+  build-app:
     needs: build-server
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
@@ -77,261 +76,247 @@ jobs:
           - os: macos-latest
             server_artifact: server-macos
             artifact_suffix: macos
-
+    runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Download server artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ matrix.server_artifact }}
-        path: server
+      - name: Download server artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.server_artifact }}
+          path: server
 
-    - name: Move and rename server archive
-      run: |
-        rm -rf app/src/main/resources/server
-        mkdir -p app/src/main/resources/server
-        mv "server/server.zip" app/src/main/resources/server/server.zip
-      shell: bash
+      - name: Move and rename server archive
+        run: |
+          rm -rf app/src/main/resources/server
+          mkdir -p app/src/main/resources/server
+          mv "server/server.zip" app/src/main/resources/server/server.zip
+        shell: bash
 
-    - name: Set up Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Cache Gradle
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: gradle-${{ runner.os }}-
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
 
-    - name: Build fatJar
-      run: |
-        ./gradlew fatJar
-        mv app/build/libs/app.jar app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
+      - name: Build fatJar
+        run: |
+          ./gradlew fatJar
+          mv app/build/libs/app.jar app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
 
-    - name: Upload JAR
-      uses: actions/upload-artifact@v4
-      with:
-        name: iat-${{ matrix.artifact_suffix }}
-        path: app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: iat-${{ matrix.artifact_suffix }}
+          path: app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
 
-    - name: Read version
-      id: version
-      shell: bash
-      run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+      - name: Read version
+        id: version
+        run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
-    - name: Upload JAR to GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ steps.version.outputs.version }}
-        files: app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload JAR to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: app/build/libs/iat-${{ matrix.artifact_suffix }}.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Phase C - Linux DEB Installer
   linux-installer:
+    needs: build-app
     runs-on: ubuntu-latest
-    needs: build
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Download JBR
-      run: |
-        curl -L -o jre.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.12-linux-x64-b1000.54.tar.gz
-        mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
+      - name: Download JBR
+        run: |
+          curl -L -o jre.tar.gz https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.12-linux-x64-b1000.54.tar.gz
+          mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
 
-    - name: Download fatJar
-      uses: actions/download-artifact@v4
-      with:
-        name: iat-linux
-        path: app/build/libs
+      - name: Download fatJar
+        uses: actions/download-artifact@v4
+        with:
+          name: iat-linux
+          path: app/build/libs
 
-    - name: Read version
-      id: version
-      run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+      - name: Read version
+        id: version
+        run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
-    - name: Create DEB installer
-      run: |
-        mkdir -p ./jpackage/linux/res
-        
-        cat > ./jpackage/linux/res/control <<EOF
-        Package: invision-archive-tools
-        Version: ${{ steps.version.outputs.version }}
-        Architecture: amd64
-        Maintainer: Mark Fisher <iat.legacy037@aleeas.com>
-        Depends:
-        Description: Invision Archive Tools - A user-friendly tool that enables members of Invision-based communities to convert a variety of different types of content to offline copies.
-        EOF
-      
-        jpackage \
-          --type deb \
-          --input app/build/libs \
-          --main-jar iat-linux.jar \
-          --main-class com.urbanelf.iat.Core \
-          --runtime-image jre \
-          --resource-dir jpackage/linux/res \
-          --dest output \
-          --name "Invision Archive Tools" \
-          --icon jpackage/linux/icon.png \
-          --app-version "${{ steps.version.outputs.version }}" \
-          --vendor "Urban-Elf" \
-          --linux-shortcut \
-          --linux-menu-group "IAT;Invision;Archive;Tools" \
-          --verbose
+      - name: Create DEB installer
+        run: |
+          mkdir -p ./jpackage/linux/res
+          cat > ./jpackage/linux/res/control <<EOF
+          Package: invision-archive-tools
+          Version: ${{ steps.version.outputs.version }}
+          Architecture: amd64
+          Maintainer: Mark Fisher <iat.legacy037@aleeas.com>
+          Depends:
+          Description: Invision Archive Tools - A user-friendly tool that enables members of Invision-based communities to convert a variety of different types of content to offline copies.
+          EOF
 
-    - name: Debug output folder
-      run: ls -l output
+          jpackage \
+            --type deb \
+            --input app/build/libs \
+            --main-jar iat-linux.jar \
+            --main-class com.urbanelf.iat.Core \
+            --runtime-image jre \
+            --resource-dir jpackage/linux/res \
+            --dest output \
+            --name "Invision Archive Tools" \
+            --icon jpackage/linux/icon.png \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Urban-Elf" \
+            --linux-shortcut \
+            --linux-menu-group "IAT;Invision;Archive;Tools" \
+            --verbose
 
-    - name: Upload DEB to GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ steps.version.outputs.version }}
-        files: output/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload DEB to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Phase C - Windows EXE Installer
   windows-installer:
+    needs: build-app
     runs-on: windows-latest
-    needs: build
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Download JRE
-      run: |
-        curl -L -o jre.zip https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_windows_hotspot_17.0.16_8.zip
-        mkdir jre
-        7z x jre.zip -ojre
+      - name: Download JRE
+        run: |
+          curl -L -o jre.zip https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_windows_hotspot_17.0.16_8.zip
+          mkdir jre
+          7z x jre.zip -ojre
+          # Flatten directory structure
+          Get-ChildItem -Directory jre | ForEach-Object {
+            Move-Item -Path "$($_.FullName)\*" -Destination jre
+            Remove-Item -Recurse -Force $_.FullName
+          }
+          Remove-Item jre.zip
 
-        # Flatten directory structure
-        $dirs = Get-ChildItem -Directory -Path jre
-        foreach ($dir in $dirs) {
-          Move-Item -Path "$($dir.FullName)\*" -Destination jre
-          Remove-Item -Recurse -Force $dir.FullName
-        }
-    
-        Remove-Item jre.zip
+      - name: Download fatJar
+        uses: actions/download-artifact@v4
+        with:
+          name: iat-windows
+          path: app/build/libs
 
-    - name: Download fatJar
-      uses: actions/download-artifact@v4
-      with:
-        name: iat-windows
-        path: app\build\libs
+      - name: Download Windows server.zip to resource directory
+        uses: actions/download-artifact@v4
+        with:
+          name: server-windows
+          path: app/src/main/resources/server
 
-    - name: Download Windows server.zip to resource directory
-      uses: actions/download-artifact@v4
-      with:
-        name: server-windows
-        path: app/src/main/resources/server
+      - name: Unzip and move server
+        run: |
+          7z x app/src/main/resources/server/server.zip -oapp/build/libs
+          del app\src\main\resources\server\server.zip
 
-    - name: Unzip and move server
-      run: |
-        7z x app/src/main/resources/server/server.zip -oapp/build/libs
-        del app\src\main\resources\server\server.zip
+      - name: Read version
+        id: version
+        run: echo "version=$(Get-Content -Raw -Path .\VERSION)" >> $env:GITHUB_OUTPUT
 
-    - name: Read version
-      id: version
-      run: |
-        echo "version=$(Get-Content -Raw -Path .\VERSION)" >> $env:GITHUB_OUTPUT
+      - name: Create MSI installer
+        run: |
+          jpackage `
+            --type msi `
+            --input app\build\libs `
+            --main-jar iat-windows.jar `
+            --main-class com.urbanelf.iat.Core `
+            --runtime-image jre `
+            --dest output `
+            --name "Invision Archive Tools" `
+            --icon jpackage/windows/icon.ico `
+            --app-version ${{ steps.version.outputs.version }} `
+            --vendor "Urban-Elf" `
+            --win-menu `
+            --win-menu-group "IAT" `
+            --win-shortcut `
+            --verbose
 
-    - name: Create MSI installer
-      run: |
-        jpackage `
-          --type msi `
-          --input app\build\libs `
-          --main-jar iat-windows.jar `
-          --main-class com.urbanelf.iat.Core `
-          --runtime-image jre `
-          --dest output `
-          --name "Invision Archive Tools" `
-          --icon jpackage/windows/icon.ico `
-          --app-version ${{ steps.version.outputs.version }} `
-          --vendor "Urban-Elf" `
-          --win-menu `
-          --win-menu-group "IAT" `
-          --win-shortcut `
-          --verbose
-
-    - name: Upload EXE to GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ steps.version.outputs.version }}
-        files: "output/*"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload EXE to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: "output/*"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Phase C - macOS PKG Installer
   macos-installer:
+    needs: build-app
     runs-on: macos-latest
-    needs: build
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Download JRE
-      run: |
-        curl -L -o jre.tar.gz https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_mac_hotspot_17.0.16_8.tar.gz
-        mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
+      - name: Download JRE
+        run: |
+          curl -L -o jre.tar.gz https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.16%2B8/OpenJDK17U-jre_x64_mac_hotspot_17.0.16_8.tar.gz
+          mkdir jre && tar -xf jre.tar.gz -C jre --strip-components=1
 
-    - name: Download fatJar
-      uses: actions/download-artifact@v4
-      with:
-        name: iat-macos
-        path: app/build/libs
+      - name: Download fatJar
+        uses: actions/download-artifact@v4
+        with:
+          name: iat-macos
+          path: app/build/libs
 
-    - name: Read version
-      id: version
-      run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+      - name: Read version
+        id: version
+        run: echo "version=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
-    - name: Create DMG installer
-      run: |
-        jpackage \
-          --type dmg \
-          --input app/build/libs \
-          --main-jar iat-macos.jar \
-          --main-class com.urbanelf.iat.Core \
-          --runtime-image jre \
-          --dest output \
-          --name "Invision Archive Tools" \
-          --icon jpackage/macos/icon.icns \
-          --app-version "${{ steps.version.outputs.version }}" \
-          --vendor "Urban-Elf" \
-          --mac-package-name "Invision Archive Tools" \
-          --mac-package-identifier com.urbanelf.iat \
-          --mac-package-signing-prefix "com.urbanelf" \
-          --verbose
+      - name: Create DMG installer
+        run: |
+          jpackage \
+            --type dmg \
+            --input app/build/libs \
+            --main-jar iat-macos.jar \
+            --main-class com.urbanelf.iat.Core \
+            --runtime-image jre \
+            --dest output \
+            --name "Invision Archive Tools" \
+            --icon jpackage/macos/icon.icns \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Urban-Elf" \
+            --mac-package-name "Invision Archive Tools" \
+            --mac-package-identifier com.urbanelf.iat \
+            --mac-package-signing-prefix "com.urbanelf" \
+            --verbose
 
-    - name: Debug output folder
-      run: ls -l output
-
-    - name: Upload DMG to GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ steps.version.outputs.version }}
-        files: output/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
