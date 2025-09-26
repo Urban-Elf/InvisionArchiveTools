@@ -171,6 +171,7 @@ jobs:
           --name "Invision Archive Tools" \
           --icon jpackage/linux/icon.png \
           --app-version "${{ steps.version.outputs.version }}" \
+          --vendor "Urban-Elf" \
           --linux-shortcut \
           --linux-menu-group "IAT;Invision;Archive;Tools" \
           --verbose
@@ -248,6 +249,7 @@ jobs:
           --name "Invision Archive Tools" `
           --icon jpackage/windows/icon.ico `
           --app-version ${{ steps.version.outputs.version }} `
+          --vendor "Urban-Elf" `
           --win-menu `
           --win-menu-group "IAT" `
           --win-shortcut `
@@ -301,6 +303,7 @@ jobs:
           --name "Invision Archive Tools" \
           --icon jpackage/macos/icon.icns \
           --app-version "${{ steps.version.outputs.version }}" \
+          --vendor "Urban-Elf" \
           --mac-package-name "Invision Archive Tools" \
           --mac-package-identifier com.urbanelf.iat \
           --mac-package-signing-prefix "com.urbanelf" \
