@@ -156,7 +156,11 @@ def main(args: list[str]):
         SINGLE_WORKER = True
 
     util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi.where())
-    util.log(util.LogLevel.INFO, "ChromeDriver path: " + undetected_chromedriver.find_chrome_executable())
+    chrome_path = undetected_chromedriver.find_chrome_executable()
+    if chrome_path:
+        util.log(util.LogLevel.INFO, "ChromeDriver path: " + chrome_path)
+    else:
+        util.log(util.LogLevel.WARN, "ChromeDriver not present on this system.")
 
     util.log(util.LogLevel.INFO, "IAT server started successfully.")
     if DEBUG:
