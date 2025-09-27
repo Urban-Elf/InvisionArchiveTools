@@ -58,14 +58,12 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.swing.Box;
@@ -82,7 +80,6 @@ import javafx.embed.swing.JFXPanel;
 import javafx.stage.FileChooser;
 
 import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class Core {
@@ -434,7 +431,7 @@ public class Core {
                     FILE_CHOOSER = new FileChooser();
                     FILE_CHOOSER.setInitialDirectory(new File(System.getProperty("user.home")));
                 });
-                USE_SWING_FILE_CHOOSERS = true;
+                USE_SWING_FILE_CHOOSERS = false;
             } catch (Exception ignored) {
                 Core.warning(TAG, "JavaFX failed to initialize, falling back");
             }
@@ -458,7 +455,7 @@ public class Core {
 
     public static File openFile(FileChooser.ExtensionFilter... extensionFilters) {
         if (USE_SWING_FILE_CHOOSERS) {
-            final List<File> result = showFileChooser(OPEN, "Open File", System.getProperty("user.home"), extensionFilters);
+            final List<File> result = showFileChooser(OPEN, "Open File", System.getProperty("user.home"), null, extensionFilters);
             return !result.isEmpty() ? result.get(0) : null;
         }
         FILE_CHOOSER.setTitle("Open File");
@@ -470,10 +467,10 @@ public class Core {
 
     public static File saveFile(String initialFileName, FileChooser.ExtensionFilter... extensionFilters) {
         if (USE_SWING_FILE_CHOOSERS) {
-            final List<File> result = showFileChooser(SAVE, "", initialFileName, extensionFilters);
+            final List<File> result = showFileChooser(SAVE, "Save Archive", System.getProperty("user.home"), initialFileName, extensionFilters);
             return !result.isEmpty() ? result.get(0) : null;
         }
-        FILE_CHOOSER.setTitle("");//"Save File");
+        FILE_CHOOSER.setTitle("Save Archive");
         FILE_CHOOSER.setInitialFileName(initialFileName);
         FILE_CHOOSER.getExtensionFilters().clear();
         FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
@@ -488,64 +485,54 @@ public class Core {
      * if nothing selected or dialog is cancelled:
      *    an empty list
      */
-    private static List<File> showFileChooser(int mode, String title, String defaultPath, FileChooser.ExtensionFilter... extensionFilters) {
-        String filterDescriptions = null;
-        String filterPatterns = null;
+    private static List<File> showFileChooser(
+            int mode, String title, String defaultPath, String initialFileName,
+            FileChooser.ExtensionFilter... extensionFilters) {
 
-        if (extensionFilters != null) {
-            filterDescriptions = Arrays.stream(extensionFilters)
-                    .map(FileChooser.ExtensionFilter::getDescription)
-                    .collect(Collectors.joining(";"));
-            filterPatterns = Arrays.stream(extensionFilters)
-                    .map(filter -> filter.getExtensions().stream()
-                            // remove '*' prefix if you want just ".json" instead of "*.json"
-                            .map(ext -> ext.startsWith("*.") ? ext.substring(1) : ext)
-                            .collect(Collectors.joining(",")))
-                    .collect(Collectors.joining(";"));
-        }
-
-        final JFrame frame = new JFrame();
-        frame.setVisible(true);
-        frame.toFront();
-        frame.setAlwaysOnTop(true);
-        frame.setVisible(false);
         JFileChooser fileChooser = new JFileChooser(defaultPath);
         fileChooser.setDialogTitle(title);
 
-        //process filterPatterns
-        if (filterPatterns != null) {
-            for (String filter : filterPatterns.split(";")) {
-                FileFilter filefilter = new FileNameExtensionFilter(filterDescriptions, filter.split(","));
-                fileChooser.addChoosableFileFilter(filefilter);
+        // Add filters
+        if (extensionFilters != null) {
+            fileChooser.setAcceptAllFileFilterUsed(false);
+            for (FileChooser.ExtensionFilter fxFilter : extensionFilters) {
+                String desc = fxFilter.getDescription();
+                String[] exts = fxFilter.getExtensions().stream()
+                        .map(ext -> ext.startsWith("*.") ? ext.substring(2) : ext) // ".json"
+                        .toArray(String[]::new);
+                fileChooser.addChoosableFileFilter(new FileNameExtensionFilter(desc, exts));
             }
-            if (fileChooser.getChoosableFileFilters().length > 0)
+            if (fileChooser.getChoosableFileFilters().length > 0) {
                 fileChooser.setFileFilter(fileChooser.getChoosableFileFilters()[0]);
+            }
         }
 
         int res;
-
         if (mode == OPEN_MULTIPLE) {
             fileChooser.setMultiSelectionEnabled(true);
-            res = fileChooser.showOpenDialog(frame);
+            res = fileChooser.showOpenDialog(null);
         } else if (mode == OPEN) {
             fileChooser.setMultiSelectionEnabled(false);
-            res = fileChooser.showOpenDialog(frame);
+            res = fileChooser.showOpenDialog(null);
         } else {
-            res = fileChooser.showSaveDialog(frame);
+            // SAVE mode → set default filename if provided
+            if (initialFileName != null && !initialFileName.isEmpty()) {
+                fileChooser.setSelectedFile(new File(defaultPath, initialFileName));
+            }
+            res = fileChooser.showSaveDialog(null);
         }
-        frame.dispose();
 
-        final ArrayList<File> returnValue = new ArrayList<>();
-
+        List<File> result = new ArrayList<>();
         if (res == JFileChooser.APPROVE_OPTION) {
-            if (fileChooser.isMultiSelectionEnabled())
-                Collections.addAll(returnValue, fileChooser.getSelectedFiles());
-            else
-                returnValue.add(fileChooser.getSelectedFile());
+            if (fileChooser.isMultiSelectionEnabled()) {
+                Collections.addAll(result, fileChooser.getSelectedFiles());
+            } else {
+                result.add(fileChooser.getSelectedFile());
+            }
         }
-
-        return returnValue;
+        return result;
     }
+
 
     private static void initializeLogSystem() throws IOException {
         final Stream<Path> files = Files.list(FileTree.getLogPath());

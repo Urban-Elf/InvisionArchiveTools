@@ -296,6 +296,7 @@ public class MainFrame extends JFrame {
                                         // Delete file
                                         try {
                                             Files.deleteIfExists(p);
+                                            Core.warning(TAG, "Deleted archive '" + p.getFileName().toString() + "'");
                                         } catch (IOException e3) {
                                             Core.error(TAG, "Failed to delete archive '" + p.getFileName().toString() + "'", e3);
                                         }
@@ -318,6 +319,7 @@ public class MainFrame extends JFrame {
                         } else if (result == 1) {
                             try {
                                 Files.deleteIfExists(p);
+                                Core.warning(TAG, "Deleted archive '" + p.getFileName().toString() + "'");
                             } catch (IOException e2) {
                                 Core.error(TAG, "Failed to delete archive '" + p.getFileName().toString() + "'", e2);
                             }
