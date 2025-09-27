@@ -459,9 +459,12 @@ public class Core {
             return !result.isEmpty() ? result.get(0) : null;
         }
         FILE_CHOOSER.setTitle("Open File");
-        FILE_CHOOSER.getExtensionFilters().clear();
-        FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
-        FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+        if (extensionFilters != null && extensionFilters.length != 0) {
+            FILE_CHOOSER.getExtensionFilters().clear();
+            FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
+            FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+            FILE_CHOOSER.setSelectedExtensionFilter(extensionFilters[0]);
+        }
         return FILE_CHOOSER.showOpenDialog(null);
     }
 
@@ -472,9 +475,12 @@ public class Core {
         }
         FILE_CHOOSER.setTitle("Save Archive");
         FILE_CHOOSER.setInitialFileName(initialFileName);
-        FILE_CHOOSER.getExtensionFilters().clear();
-        FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
-        FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+        if (extensionFilters != null && extensionFilters.length != 0) {
+            FILE_CHOOSER.getExtensionFilters().clear();
+            FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
+            FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+            FILE_CHOOSER.setSelectedExtensionFilter(extensionFilters[0]);
+        }
         return FILE_CHOOSER.showSaveDialog(null);
     }
 
