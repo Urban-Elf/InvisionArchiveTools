@@ -57,10 +57,15 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.swing.Box;
@@ -76,6 +81,10 @@ import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.stage.FileChooser;
 
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 public class Core {
     private static final String TAG = Core.class.getSimpleName();
 
@@ -86,6 +95,11 @@ public class Core {
     public static final int SCROLL_BLOCK_INCREMENT = 32;
 
     private static FileChooser FILE_CHOOSER;
+
+    private static final int OPEN_MULTIPLE = 1;
+    private static final int OPEN = 2;
+    private static final int SAVE = 3;
+    private static boolean USE_SWING_FILE_CHOOSERS = true;
 
     private static FileLock lock;
     private static FileChannel channel;
@@ -411,34 +425,42 @@ public class Core {
         ThemeManager.applyDefaultTheme();
 
         Benchmark.begin();
-        new JFXPanel(); // Initialize JavaFX
-        Core.info(TAG, "Initialized JavaFX [" + Benchmark.end() + "ms]");
-        Platform.runLater(() -> {
-            FILE_CHOOSER = new FileChooser();
-            FILE_CHOOSER.setInitialDirectory(new File(System.getProperty("user.home")));
 
-            SwingUtilities.invokeLater(() -> {
-                if (LocalStorage.getJsonObject().has(LS_AGREED_TO_TERMS)) {
-                    new MainFrame(); // Automatically shows
-                } else {
-                    new TOSFrame() {
-                        @Override
-                        protected void accepted() {
-                            LocalStorage.getJsonObject().put(LS_AGREED_TO_TERMS, true);
-                            LocalStorage.serialize();
-                            new MainFrame(); // Automatically shows
-                        }
-                    }.setVisible(true);
-                }
-            });
+        new Thread(() -> {
+            try {
+                new JFXPanel(); // Initialize JavaFX
+                Core.info(TAG, "Initialized JavaFX [" + Benchmark.end() + "ms]");
+                Platform.runLater(() -> {
+                    FILE_CHOOSER = new FileChooser();
+                    FILE_CHOOSER.setInitialDirectory(new File(System.getProperty("user.home")));
+                });
+                USE_SWING_FILE_CHOOSERS = true;
+            } catch (Exception ignored) {
+                Core.warning(TAG, "JavaFX failed to initialize, falling back");
+            }
+        }, "JavaFX-Init").start();
+
+        SwingUtilities.invokeLater(() -> {
+            if (LocalStorage.getJsonObject().has(LS_AGREED_TO_TERMS)) {
+                new MainFrame(); // Automatically shows
+            } else {
+                new TOSFrame() {
+                    @Override
+                    protected void accepted() {
+                        LocalStorage.getJsonObject().put(LS_AGREED_TO_TERMS, true);
+                        LocalStorage.serialize();
+                        new MainFrame(); // Automatically shows
+                    }
+                }.setVisible(true);
+            }
         });
-
-        //var group = new ICWorkerStack<IC4Worker<?>>(2);
-        //group.setIC(new IC4("https://catholicharbor.com/"));
-        //group.pushWorker(new MessengerWorker(12, posts -> {}));
     }
 
     public static File openFile(FileChooser.ExtensionFilter... extensionFilters) {
+        if (USE_SWING_FILE_CHOOSERS) {
+            final List<File> result = showFileChooser(OPEN, "Open File", System.getProperty("user.home"), extensionFilters);
+            return !result.isEmpty() ? result.get(0) : null;
+        }
         FILE_CHOOSER.setTitle("Open File");
         FILE_CHOOSER.getExtensionFilters().clear();
         FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
@@ -447,12 +469,82 @@ public class Core {
     }
 
     public static File saveFile(String initialFileName, FileChooser.ExtensionFilter... extensionFilters) {
+        if (USE_SWING_FILE_CHOOSERS) {
+            final List<File> result = showFileChooser(SAVE, "", initialFileName, extensionFilters);
+            return !result.isEmpty() ? result.get(0) : null;
+        }
         FILE_CHOOSER.setTitle("");//"Save File");
         FILE_CHOOSER.setInitialFileName(initialFileName);
         FILE_CHOOSER.getExtensionFilters().clear();
         FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
         FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
         return FILE_CHOOSER.showSaveDialog(null);
+    }
+
+    /* Opens a swing JFileChooser
+     * returns:
+     * if multiple selection mode the list of Files selected
+     * if single selection mode a list with one File Object
+     * if nothing selected or dialog is cancelled:
+     *    an empty list
+     */
+    private static List<File> showFileChooser(int mode, String title, String defaultPath, FileChooser.ExtensionFilter... extensionFilters) {
+        String filterDescriptions = null;
+        String filterPatterns = null;
+
+        if (extensionFilters != null) {
+            filterDescriptions = Arrays.stream(extensionFilters)
+                    .map(FileChooser.ExtensionFilter::getDescription)
+                    .collect(Collectors.joining(";"));
+            filterPatterns = Arrays.stream(extensionFilters)
+                    .map(filter -> filter.getExtensions().stream()
+                            // remove '*' prefix if you want just ".json" instead of "*.json"
+                            .map(ext -> ext.startsWith("*.") ? ext.substring(1) : ext)
+                            .collect(Collectors.joining(",")))
+                    .collect(Collectors.joining(";"));
+        }
+
+        final JFrame frame = new JFrame();
+        frame.setVisible(true);
+        frame.toFront();
+        frame.setAlwaysOnTop(true);
+        frame.setVisible(false);
+        JFileChooser fileChooser = new JFileChooser(defaultPath);
+        fileChooser.setDialogTitle(title);
+
+        //process filterPatterns
+        if (filterPatterns != null) {
+            for (String filter : filterPatterns.split(";")) {
+                FileFilter filefilter = new FileNameExtensionFilter(filterDescriptions, filter.split(","));
+                fileChooser.addChoosableFileFilter(filefilter);
+            }
+            if (fileChooser.getChoosableFileFilters().length > 0)
+                fileChooser.setFileFilter(fileChooser.getChoosableFileFilters()[0]);
+        }
+
+        int res;
+
+        if (mode == OPEN_MULTIPLE) {
+            fileChooser.setMultiSelectionEnabled(true);
+            res = fileChooser.showOpenDialog(frame);
+        } else if (mode == OPEN) {
+            fileChooser.setMultiSelectionEnabled(false);
+            res = fileChooser.showOpenDialog(frame);
+        } else {
+            res = fileChooser.showSaveDialog(frame);
+        }
+        frame.dispose();
+
+        final ArrayList<File> returnValue = new ArrayList<>();
+
+        if (res == JFileChooser.APPROVE_OPTION) {
+            if (fileChooser.isMultiSelectionEnabled())
+                Collections.addAll(returnValue, fileChooser.getSelectedFiles());
+            else
+                returnValue.add(fileChooser.getSelectedFile());
+        }
+
+        return returnValue;
     }
 
     private static void initializeLogSystem() throws IOException {
