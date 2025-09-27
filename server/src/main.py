@@ -156,12 +156,12 @@ def main(args: list[str]):
         SINGLE_WORKER = True
 
     certifi_path = certifi.where()
-    if certifi_path:
+    if certifi_path is not None:
         util.log(util.LogLevel.INFO, "CERTIFI location: " + certifi_path)
     else:
         util.log(util.LogLevel.WARNING, "CERTIFI not found in server installation.")
     chrome_path = undetected_chromedriver.find_chrome_executable()
-    if chrome_path:
+    if chrome_path is not None:
         util.log(util.LogLevel.INFO, "ChromeDriver path: " + chrome_path)
     else:
         util.log(util.LogLevel.WARNING, "ChromeDriver not present on this system.")
