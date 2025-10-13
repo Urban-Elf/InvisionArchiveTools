@@ -62,7 +62,7 @@ class SharedState:
                               hint="Please do not interfere with the browser.",
                               indeterminate=False)
     SESSION_INTERRUPTED = ICWorkerState(note="Session interrupted. Please restart the task.",
-                                     button_configs=[ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)]),
+                                     button_configs=[ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)])
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
                                        hint="Please notify the developer (Help -> Report Bug)",
                                        button_configs=[
