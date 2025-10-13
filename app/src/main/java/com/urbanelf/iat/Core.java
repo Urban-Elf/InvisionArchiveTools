@@ -42,6 +42,7 @@ import java.awt.Desktop;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.WindowEvent;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -556,7 +557,8 @@ public class Core {
 
         try {
             logFile = FileTree.getLogPath().resolve(logFileNameRaw + ".log").toFile();
-            logStream = new PrintStream(logFile, StandardCharsets.UTF_8);
+            logStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(logFile, false)),
+                    true, StandardCharsets.UTF_8);
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
