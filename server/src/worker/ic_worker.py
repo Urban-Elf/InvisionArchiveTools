@@ -144,6 +144,9 @@ class ICWorker(threading.Thread):
                 self.set_state(SharedState.INTERNAL_EXCEPTION)
 
     def set_state(self, state: ICWorkerState):
+        # Prevents cases such as tuples being passed in by trailing commas in state definitions
+        if not isinstance(state, ICWorkerState):
+            raise TypeError("state must be an instance of ICWorkerState, not " + str(type(state)))
         self.state = state
         proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.STATE_CHANGED)
             .add_data("state", state))

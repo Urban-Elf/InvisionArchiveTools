@@ -71,4 +71,4 @@ class SharedState:
     ATTEMPTING_RECONNECT = ICWorkerState(note="Connecting...")
     RESULT_AVAILABLE = ICWorkerState(note="Operation completed successfully.",
                                      hint="Press the button to save the archive.",
-                                     button_configs=[ButtonConfig("Export...", shared_action=shared_constants.ButtonCallbackSA.EXPORT_ARCHIVE),])
+                                     button_configs=[ButtonConfig("Export...", shared_action=shared_constants.ButtonCallbackSA.EXPORT_ARCHIVE)])
