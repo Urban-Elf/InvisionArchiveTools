@@ -27,6 +27,7 @@ from .state.worker_state import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import *
 import undetected_chromedriver
 import screeninfo
@@ -53,6 +54,7 @@ class ICWorker(threading.Thread):
         self.worker_id = worker_id
         self.ic = ic
         self.driver = None
+        self.actions = None
         self.shutdown_event = threading.Event()
 
     def execute(self):
@@ -75,6 +77,12 @@ class ICWorker(threading.Thread):
             try:
                 # Attempt to start the browser
                 self.driver: IC_ChromeDriver = create_chromedriver(self)
+                # Shutdown if a checked failure occurred in initialization
+                if not self.driver.is_initialized():
+                    self.shutdown()
+                    return
+                # Create action chains
+                self.actions = ActionChains(self.driver)
             except:
                 proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.CHROMEDRIVER_ERROR)
                                          .add_data("stacktrace", traceback.format_exc()))
@@ -161,7 +169,7 @@ class ICWorker(threading.Thread):
 
     def shutdown(self, callback: bool=True):
         self.shutdown_event.set()
-        if (self.driver is not None):
+        if self.driver != None and self.driver.is_initialized():
             self.driver.quit()
         if callback:
             self.on_shutdown()
@@ -214,10 +222,11 @@ def create_chromedriver(ic_worker: ICWorker) -> IC_ChromeDriver:
 
     driver = IC_ChromeDriver(ic_worker=ic_worker, options=options)
 
-    # Get screen width and height
-    screen = screeninfo.get_monitors()[0]  # primary monitor
-    width = screen.width // 2.4
-    width = min(767, width) # Clamp width to IC RWD width for mobile
-    height = screen.height
-    driver.set_window_rect(0, 0, width, height)
+    if driver.is_initialized():
+        # Get screen width and height
+        screen = screeninfo.get_monitors()[0]  # primary monitor
+        width = screen.width // 2.4
+        width = min(767, width) # Clamp width to IC RWD width for mobile
+        height = screen.height
+        driver.set_window_rect(0, 0, width, height)
     return driver

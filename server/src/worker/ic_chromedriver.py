@@ -22,22 +22,36 @@ from .ic_worker import ICWorker
 from .state.worker_state import *
 from .. import util
 from selenium.common.exceptions import WebDriverException
+from urllib.error import URLError
 import re
 
 class IC_ChromeDriver(undetected_chromedriver.Chrome):
     def __init__(self, ic_worker: ICWorker, options=None, user_data_dir=None, driver_executable_path=None, browser_executable_path=None, port=0, enable_cdp_events=False, desired_capabilities=None, advanced_elements=False, keep_alive=True, log_level=0, headless=False, version_main=None, patcher_force_close=False, suppress_welcome=True, use_subprocess=True, debug=False, no_sandbox=True, user_multi_procs = False, **kw):
-        super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
-        self.ic_worker = ic_worker
+        self.initialized = False
         self.network_err_state = ICWorkerState(note="Please check your network connection.",
-                                                 hint="",
-                                                 button_configs=[ButtonConfig("Retry", client_object=True)])
+                                                hint="",
+                                                button_configs=[
+                                                    ButtonConfig("Retry"),
+                                                    ButtonConfig("Close", shared_action=ButtonCallbackSA.TERMINATE)])
+        while True:
+            try: 
+                super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
+                self.initialized = True
+                break
+            except URLError:
+                ic_worker.set_state(self.network_err_state)
+        self.ic_worker = ic_worker
+
+    def is_initialized(self):
+        return self.initialized
 
     def get(self, url):
         while not self.ic_worker.shutdown_event.is_set():
             try:
-                super().get(url)
                 # Log
                 util.log(util.LogLevel.INFO, "current_url => " + url)
+                # super invocation
+                super().get(url)
                 # Success
                 break
             except WebDriverException as e:
