@@ -54,7 +54,7 @@ body {
 
 main {
     background-color: var(--card-bg);
-    padding: 2rem;
+    padding: 1.2rem;
     border-radius: 8px;
     border: 1px solid var(--border);
     max-width: 1000px;
@@ -264,7 +264,7 @@ article {
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
     background-color: var(--bg);
 }
 
