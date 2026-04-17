@@ -27,6 +27,8 @@ v1.0.3
 
 Invision Archive Tools (IAT) is a user-friendly tool that enables members of Invision-based communities to convert a variety of different types of content into offline copies.
 
+**IMPORTANT NOTICE: THIS TOOL IS NOT IN ANY WAY ASSOCIATED WITH, MAINTAINED BY, OR APPROVED BY [INVISIONCOMMUNITY.COM](https://invisioncommunity.com) AND/OR ITS AFFILIATES.**
+
 Current content model:
 
 | Content Type   | Supported  |
