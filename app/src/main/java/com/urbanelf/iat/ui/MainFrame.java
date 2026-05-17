@@ -569,12 +569,17 @@ public class MainFrame extends JFrame {
                 <html>
                 <br>
                 <b>Core Development</b><br><br>
-                  - Mark "Urban-Elf" Fisher
+                  - Urban-Elf
                 <br><br><br>
                 
                 <b>UI/UX Design</b>
                 <br><br>
-                  - Mark "Urban-Elf" Fisher
+                  - Urban-Elf
+                <br><br><br>
+                
+                <b>Windows Testing</b>
+                <br><br>
+                  - Sherlock Holmes
                 <br><br><br>
                 
                 <b>UI Themes</b>
