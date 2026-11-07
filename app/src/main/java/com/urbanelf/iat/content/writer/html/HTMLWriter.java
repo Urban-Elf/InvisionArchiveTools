@@ -65,23 +65,7 @@ public abstract class HTMLWriter extends Writer {
 
     public abstract File writeHTML(TemplateEngine engine, Content content, File dst) throws IOException;
 
-    protected void processUserData(HashMap<String, UserData> userData, Path resPath) {
-        userData.forEach((key, value) -> {
-            final String avatarName = URLUtils.getResourceName(value.getAvatarUrl());
-            final HttpClient client = HttpClient.newHttpClient();
-            final HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(value.getAvatarUrl()))
-                    .build();
-            try {
-                client.send(request, HttpResponse.BodyHandlers.ofFile(resPath.resolve(avatarName)));
-            } catch (IOException | InterruptedException e) {
-                Core.warning(TAG, "");
-                return; // Continue loop
-            }
-            // Update user data
-            value.setAvatarUrl(Paths.get("..", resPath.getFileName().toString(), avatarName).toString());
-        });
-    }
+
 
     protected void copyResources(String srcPath, Path dstPath) {
         try {

@@ -21,6 +21,7 @@ import re
 import threading
 import traceback
 from enum import Enum, auto
+from urllib.parse import urlsplit, urlunsplit
 
 DEBUG = False
 
@@ -35,6 +36,29 @@ def strip_tags(text: str):
     Strips HTML tags from the given text.
     """
     return re.sub(TAG_REGEX, '', text)
+
+def safe_url_base(url: str, suffix: str = "") -> str:
+	"""
+	Returns a cleaned base URL without query or fragment parts.
+	Optionally appends a suffix (e.g., '/page/', '/comments/').
+
+	Examples:
+	>>> safe_url_base("https://site.com/topic/123/?foo=bar#section")
+	'https://site.com/topic/123'
+	>>> safe_url_base("https://site.com/topic/123?page=2", "/page/")
+	'https://site.com/topic/123/page/'
+	"""
+	parts = urlsplit(url)
+	base = parts.path.rstrip('/')  # remove trailing slash for consistency
+	if suffix:
+		# ensure suffix starts and ends with a single slash
+		if not suffix.startswith("/"):
+			suffix = "/" + suffix
+		if not suffix.endswith("/"):
+			suffix += "/"
+		base += suffix.rstrip('/')  # avoid double slash at join
+
+	return urlunsplit((parts.scheme, parts.netloc, base, '', ''))
 
 def validate_json_data(json_data: str):
     if not isinstance(json_data, str):

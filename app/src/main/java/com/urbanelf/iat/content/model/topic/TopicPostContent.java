@@ -27,16 +27,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class TopicPostContent extends PostContent {
+    private static final String HEADER_AUTHOR = "author";
     private static final String HEADER_POLL = "poll";
     private static final String HEADER_RECOMMENDED_POSTS = "recommended_posts";
     private static final String HEADER_TOP_POSTERS = "top_posters";
 
+    private final String author;
     private final Poll poll;
     private final ArrayList<RecommendedPost> recommendedPosts;
     private final HashMap<String, Integer> topPosters;
 
     public TopicPostContent(PostContent content, JSONObject header) {
         super(content);
+        author = header.getString(HEADER_AUTHOR);
         poll = new Poll(header.getJSONObject(HEADER_POLL));
         // Recommended posts
         recommendedPosts = new ArrayList<>();
@@ -46,6 +49,11 @@ public class TopicPostContent extends PostContent {
         topPosters = new HashMap<>();
         final JSONObject topPostersObject = header.getJSONObject(HEADER_TOP_POSTERS);
         topPostersObject.keys().forEachRemaining(key -> topPosters.put(key, topPostersObject.getInt(key)));
+    }
+
+
+    public String getAuthor() {
+        return author;
     }
 
     public Poll getPoll() {

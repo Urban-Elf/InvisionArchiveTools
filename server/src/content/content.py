@@ -25,12 +25,63 @@ from .converter import ContentConverter
 class Content(serializable.NDJSONSerializable):
     pass
     
+class Reactor(serializable.JSONSerializable):
+    def __init__(self, avatar_url: str, name: str, datetime: str):
+        self.avatar_url = avatar_url
+        self.name = name
+        self.datetime = datetime
+        
+    def __serialize__(self):
+        return {
+            "avatar_url": self.avatar_url,
+            "name": self.name,
+            "datetime": self.datetime
+        }
+
+class Reaction(serializable.JSONSerializable):
+    def __init__(self, image: str, name: str, count: int, reactors: list[Reactor]):
+        self.image = image
+        self.name = name
+        self.count = count
+        self.reactors: list[Reactor] = reactors
+
+    def __serialize__(self):
+        return {
+            "image": self.image,
+            "name": self.name,
+            "count": self.count,
+            "reactors": [reactor.__serialize__() for reactor in self.reactors]
+        }
+
+class Reactions(serializable.JSONSerializable):
+    def __init__(self):
+        self.overview: str = ""
+        self.reactions: list[Reaction] = []
+
+    def set_overview(self, overview: str):
+        self.overview = overview
+
+    def add_reaction(self, reaction: Reaction):
+        self.reactions.append(reaction)
+
+    def __serialize__(self):
+        return {
+            "overview": self.overview,
+            "reactions": [reaction.__serialize__() for reaction in self.reactions]
+        }
+
 class Post(serializable.JSONSerializable):
     def __init__(self, author: str, datetime: str, link: str, content: str):
         self.author = author
         self.datetime = datetime
         self.link = link
         self.content = content
+        self.reactions: Reactions = None
+        self.recommended = False
+        self.hidden = False
+
+    def set_reactions(self, reactions: list[Reaction]):
+        self.reactions = reactions
 
     def convert_content(self, ic: IC):
         """Convert the content of the post using ContentConverter."""
@@ -41,7 +92,8 @@ class Post(serializable.JSONSerializable):
             "author": self.author,
             "datetime": self.datetime,
             "link": self.link,
-            "content": self.content
+            "content": self.content,
+            "reactions": self.reactions.__serialize__() if self.reactions else None
         }
     
 class UserData(serializable.JSONSerializable):

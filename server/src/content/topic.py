@@ -15,10 +15,29 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
-from .content import PostContent
+from .content import PostContent, Reactions
 from ..serializable import JSONSerializable
 from ..shared_constants import ContentType
 from .. import util
+
+class TopicMeta(JSONSerializable):
+    def __init__(self, title: str, pinned: bool, author: str, datetime: str, forum: str, forum_url: str):
+        self.title = title
+        self.pinned = pinned
+        self.author = author
+        self.datetime = datetime
+        self.forum = forum
+        self.forum_url = forum_url
+
+    def __serialize__(self):
+        return {
+            "title": self.title,
+            "pinned": self.pinned,
+            "author": self.author,
+            "datetime": self.datetime,
+            "forum": self.forum,
+            "forum_url": self.forum_url
+        }
 
 class PollOption(JSONSerializable):
     def __init__(self, text: str, value: int):
@@ -63,12 +82,14 @@ class RecommendedPost(JSONSerializable):
         self.author = author
         self.content_preview = content_preview
         self.link = link
+        self.reactions: Reactions = None
 
     def __serialize__(self):
         return {
             "author": self.author,
             "content_preview": self.content_preview,
-            "link": self.link
+            "link": self.link,
+            "reactions": self.reactions.__serialize__() if self.reactions else None
         }
 
 class TopicPostContent(PostContent):
@@ -81,19 +102,19 @@ class TopicPostContent(PostContent):
     def set_poll(self, poll: Poll):
         self.poll = poll
 
-    def add_recommended_post(self, post: RecommendedPost):
-        self.recommended_posts.append(post)
+    def set_recommended_posts(self, posts: list[RecommendedPost]):
+        self.recommended_posts = posts
 
-    def add_top_poster(self, name: str, post_count: int):
-        self.top_posters[name] = post_count
+    def set_top_posters(self, top_posters: dict[str, int]):
+        self.top_posters = top_posters
 
     def __serialize_metadata__(self):
         metadata = super().__serialize_metadata__()
-        metadata["poll"] = self.poll.__serialize__()
+        metadata["poll"] = self.poll.__serialize__() if self.poll else None
         metadata["recommended_posts"] = [post.__serialize__() for post in self.recommended_posts]
         metadata["top_posters"] = self.top_posters
         return metadata
 
-class Topic(PostContent):
+class Topic(TopicPostContent):
     def __init__(self, title):
         super().__init__(title, type=ContentType.TOPIC)

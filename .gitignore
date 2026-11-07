@@ -6,3 +6,9 @@
 
 # Ignore Gradle build output directory
 build
+
+# Ignore IDE bin dir
+app/bin
+
+# Logs
+*.log

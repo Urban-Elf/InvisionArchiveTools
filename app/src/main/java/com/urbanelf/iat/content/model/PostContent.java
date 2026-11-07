@@ -19,12 +19,16 @@
 
 package com.urbanelf.iat.content.model;
 
+import com.urbanelf.iat.util.FlatResource;
+import com.urbanelf.iat.util.FlatResourceUtils;
+
 import org.json.JSONObject;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class PostContent implements Content {
+public class PostContent implements Content, FlatResource {
     public static final String HEADER_USER_DATA = "user_data";
 
     private final String title;
@@ -47,6 +51,15 @@ public class PostContent implements Content {
         this.title = content.title;
         this.userData = content.userData;
         this.pages = content.pages;
+    }
+
+    @Override
+    public void flatten(Path resPath) {
+        // Flatten UD
+        userData.values().forEach(value -> value.flatten(resPath));
+        // Flatten posts
+        pages.forEach(page ->
+                page.forEach(post -> post.flatten(resPath)));
     }
 
     @Override

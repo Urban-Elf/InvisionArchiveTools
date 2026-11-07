@@ -19,19 +19,34 @@
 
 package com.urbanelf.iat.content.model;
 
+import com.urbanelf.iat.util.FlatResource;
+
 import org.json.JSONObject;
 
-public class Post {
+import java.nio.file.Path;
+
+public class Post implements FlatResource {
     private final String author;
     private final String dateTime;
     private final String link;
     private final String content;
+    private final Reactions reactions;
+    private final boolean recommended;
+    private final boolean hidden;
 
     public Post(JSONObject jsonObject) {
         this.author = jsonObject.getString("author");
         this.dateTime = jsonObject.getString("datetime");
         this.link = jsonObject.getString("link");
         this.content = jsonObject.getString("content");
+        this.reactions = new Reactions(jsonObject.getJSONObject("reactions"));
+        this.recommended = jsonObject.getBoolean("recommended");
+        this.hidden = jsonObject.getBoolean("hidden");
+    }
+
+    @Override
+    public void flatten(Path resPath) {
+        reactions.flatten(resPath);
     }
 
     public String getAuthor() {
@@ -48,5 +63,17 @@ public class Post {
 
     public String getContent() {
         return content;
+    }
+
+    public Reactions getReactions() {
+        return reactions;
+    }
+
+    public boolean isRecommended() {
+        return recommended;
+    }
+
+    public boolean isHidden() {
+        return hidden;
     }
 }

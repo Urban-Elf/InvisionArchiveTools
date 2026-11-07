@@ -68,8 +68,8 @@ public class MessengerHTMLWriter extends HTMLWriter {
         final ArrayList<ArrayList<? extends Post>> pages = postContent.getPages();
         final HashMap<String, UserData> userData = postContent.getUserData();
 
-        // Process user data (localize avatar paths, etc)
-        processUserData(userData, resPath);
+        // Process resources (localize avatar paths, etc)
+        postContent.flatten(resPath);
 
         // Populate generic fields
         context.setVariable("title", postContent.getTitle());

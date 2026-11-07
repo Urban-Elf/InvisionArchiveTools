@@ -19,9 +19,14 @@
 
 package com.urbanelf.iat.content.model;
 
+import com.urbanelf.iat.util.FlatResource;
+import com.urbanelf.iat.util.FlatResourceUtils;
+
 import org.json.JSONObject;
 
-public class UserData {
+import java.nio.file.Path;
+
+public class UserData implements FlatResource {
     private final String profileUrl;
     private String avatarUrl;
     private final String group;
@@ -52,6 +57,12 @@ public class UserData {
 
     public String getGroupIconUrl() {
         return groupIconUrl;
+    }
+
+    @Override
+    public void flatten(Path resPath) {
+        // Flatten avatar url
+        avatarUrl = FlatResourceUtils.flattenResource(avatarUrl, resPath);
     }
 
     @Override
