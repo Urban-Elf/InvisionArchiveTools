@@ -6,7 +6,7 @@ system = platform.system()
 home_dir = Path.home()
 
 if system == "Windows":
-    ROOT_PATH = home_dir / "AppData" / "Roaming" / "IAT"
+    ROOT_PATH = home_dir / "AppData" / "Local" / "IAT"
 elif system == "Darwin":  # macOS
     ROOT_PATH = home_dir / "Library" / "Application Support" / "IAT"
 else:  # Linux or unknown
