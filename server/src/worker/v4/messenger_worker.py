@@ -39,6 +39,24 @@ class MessengerWorkerV4State:
     SPEC_CORRUPT = ICWorkerState("Spec is corrupt! Contact developer.",
                                       button_configs=[ButtonConfig("Close", shared_action=ButtonCallbackSA.TERMINATE)])
 
+
+def locate_input_page(directory: Path) -> int:
+    if not directory.is_dir():
+        raise NotADirectoryError(f"Not a directory: {directory}")
+
+    pattern = re.compile(r"^page_(\d+)\.json$")
+    numbers = [
+        int(m.group(1))
+        for f in directory.iterdir()
+        if (m := pattern.match(f.name))
+    ]
+
+    if not numbers:
+        raise FileNotFoundError(f"No page_x.json files found in {directory}")
+
+    return max(numbers)
+
+
 class MessengerWorkerV4(IC4Worker):
     def __init__(self, worker_id, ic, output_dir):
         super().__init__(worker_id, ic, output_dir)
@@ -128,7 +146,7 @@ class MessengerWorkerV4(IC4Worker):
         # Preparation
         self.page = 1
         if loaded_from_spec:
-            persist_page = self.locate_input_page(self.output_dir)
+            persist_page = locate_input_page(self.output_dir)
             self.page = persist_page + 1
 
         final_page = 1
@@ -281,7 +299,7 @@ class MessengerWorkerV4(IC4Worker):
                 break
 
     def create_refresh_spec(self):
-        if (self.ic.is_messenger(self.driver.current_url)):
+        if self.ic.is_messenger(self.driver.current_url):
             messenger_url = util.safe_url_base(self.driver.current_url)
             r_spec = RefreshSpec(messenger_url, self.userdata_from_posts)
             util.log(util.LogLevel.INFO, "Created refresh spec for messenger: " + messenger_url)
@@ -313,19 +331,3 @@ class MessengerWorkerV4(IC4Worker):
         path = self.output_dir / "metadata.json"
         JSONWriter.write_json(meta, path)
         util.log(util.LogLevel.INFO, "Wrote metadata to " + str(path))
-
-    def locate_input_page(self, directory: Path) -> int:
-        if not directory.is_dir():
-            raise NotADirectoryError(f"Not a directory: {directory}")
-
-        pattern = re.compile(r"^page_(\d+)\.json$")
-        numbers = [
-            int(m.group(1))
-            for f in directory.iterdir()
-            if (m := pattern.match(f.name))
-        ]
-
-        if not numbers:
-            raise FileNotFoundError(f"No page_x.json files found in {directory}")
-
-        return max(numbers)   
