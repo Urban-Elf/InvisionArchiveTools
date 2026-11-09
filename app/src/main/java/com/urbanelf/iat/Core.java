@@ -86,7 +86,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 public class Core {
     private static final String TAG = Core.class.getSimpleName();
 
-    public static final String DEVELOPER_EMAIL = "iat.legacy037@aleeas.com";
+    public static final String DEVELOPER_EMAIL = "support.resolved615@aleeas.com";
     private static final String LS_AGREED_TO_TERMS = "agreed_to_terms";
 
     public static final int SCROLL_UNIT_INCREMENT = 16;
