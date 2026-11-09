@@ -417,7 +417,8 @@ public class Core {
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        System.setProperty("flatlaf.useUbuntuFont", "true");
+        if (PlatformUtils.getRunningPlatform() == PlatformUtils.Platform.Linux)
+            System.setProperty("flatlaf.useUbuntuFont", "true");
 
         // Setup default LaF
         ThemeManager.applyDefaultTheme();
