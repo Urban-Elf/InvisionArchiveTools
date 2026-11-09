@@ -15,13 +15,16 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+import json
 import threading
 import time
 import traceback
 from ..file_tree import ROOT_PATH
+from pathlib import Path
 from .. import main
 from .. import proto_model
 from .. import util
+from ..content.content import Meta
 from .ic import *
 from .state.worker_state import *
 from selenium.webdriver.support import expected_conditions as EC
@@ -48,14 +51,57 @@ def load_credentials():
 
     return creds
 
+class RefreshSpec(serializable.JSONSerializable):
+    def __init__(self, refresh_url: str, userdata_from_posts: bool=False):
+        """
+        Spec to refresh an ICWorker session. 
+        """
+        self.refresh_url = refresh_url
+        self.userdata_from_posts = userdata_from_posts
+
+    def __serialize__(self):
+        return {
+            "refresh_url": self.refresh_url,
+            "userdata_from_posts": self.userdata_from_posts
+        }
+    
+    @staticmethod
+    def deserialize(path: Path):
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+            assert type(data) is dict, "RefreshSpec JSON must be a dictionary"
+            refresh_url = data.get("refresh_url", "RefreshUrlCorrupted")
+            userdata_from_posts = data.get("userdata_from_posts", False)
+            return RefreshSpec(refresh_url=refresh_url, userdata_from_posts=userdata_from_posts)
+        return None
+
 class ICWorker(threading.Thread):
-    def __init__(self, worker_id: str, ic: IC):
+    def __init__(self, worker_id: str, ic: IC, output_dir: Path):
         super().__init__(name=worker_id)
         self.worker_id = worker_id
         self.ic = ic
+        self.output_dir = output_dir
+        self.stored_r_spec: RefreshSpec = None
+        self._r_spec: RefreshSpec = None
         self.driver = None
         self.actions = None
         self.shutdown_event = threading.Event()
+
+    @classmethod
+    def load_from_spec(cls, worker_id: str, ic: IC, r_spec: RefreshSpec, input_dir: Path):
+        worker = cls(worker_id, ic, input_dir)
+        worker._r_spec = r_spec
+        worker.stored_r_spec = r_spec
+        return worker
+
+    @classmethod
+    def load_from_input_dir(cls, worker_id: str, ic: IC, input_dir: Path):
+        refresh_spec_path = input_dir / "refresh_spec.json"
+        if not refresh_spec_path.exists():
+            raise FileNotFoundError(f"Refresh spec not found in {input_dir}")
+        refresh_spec = RefreshSpec.deserialize(refresh_spec_path)
+        # Construct from spec
+        return cls.load_from_spec(worker_id, ic, refresh_spec, input_dir)
 
     def execute(self):
         raise NotImplementedError()
@@ -63,7 +109,13 @@ class ICWorker(threading.Thread):
     def authenticate(self):
         raise NotImplementedError()
     
-    def driver_await(self, condition: EC, time=15):
+    def get_stored_refresh_spec(self) -> RefreshSpec:
+        return self.stored_r_spec
+
+    def driver_await(self, condition: EC, time=30):
+        if time == 30 and main.DEBUG:
+            time=15
+        util.log(util.LogLevel.INFO, f"driver_await (timeout={time}s)" + (" [DEBUG]" if main.DEBUG else ""))
         WebDriverWait(self.driver, time).until(condition)
 
     def run(self):
@@ -97,6 +149,8 @@ class ICWorker(threading.Thread):
             
             # Authenticate
             while not self.shutdown_event.is_set():
+                if main.DEBUG and util.strip_url(self.ic.root_url) in util.strip_url(self.driver.current_url):
+                    break # Should be logged in
                 if not util.strip_url(self.ic.auth()) in util.strip_url(self.driver.current_url):
                     self.driver.get(self.ic.auth())
 
@@ -116,7 +170,9 @@ class ICWorker(threading.Thread):
                         auth = self.driver.find_element(By.ID, "auth")
                         password = self.driver.find_element(By.NAME, "password")
 
+                        time.sleep(1)
                         auth.send_keys(creds["username"])
+                        time.sleep(1.4)
                         password.send_keys(creds["password"])
 
                         login = self.driver.find_element(By.NAME, "_processLogin")
@@ -164,7 +220,7 @@ class ICWorker(threading.Thread):
                 time.sleep(0.1)
         return self.client_object
 
-    def on_shutdown():
+    def on_shutdown(self):
         pass
 
     def shutdown(self, callback: bool=True):
@@ -182,12 +238,12 @@ class ICWorker(threading.Thread):
             .add_data("progress", progress))
 
 class IC4Worker(ICWorker):
-    def __init__(self, worker_id, ic):
-        super().__init__(worker_id, ic)
+    def __init__(self, worker_id, ic, output_dir):
+        super().__init__(worker_id, ic, output_dir)
 
 class IC5Worker(ICWorker):
-    def __init__(self, worker_id, ic):
-        super().__init__(worker_id, ic)
+    def __init__(self, worker_id, ic, output_dir):
+        super().__init__(worker_id, ic, output_dir)
 
 from .ic_chromedriver import IC_ChromeDriver
 import shutil

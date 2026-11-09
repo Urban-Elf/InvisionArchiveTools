@@ -1,4 +1,4 @@
-{"shared_action":"DISPATCH_WORKER","data":{"ic": {"version":4,"root_url":"https://catholicharbor.com"},"worker_type":"MESSENGER_WORKER"}}
+{"shared_action":"DISPATCH_WORKER","data":{"ic": {"version":4,"root_url":"https://www.catholicharbor.com"},"worker_type":"MESSENGER_WORKER", "output_dir":"test_output"}}
 
 {"shared_action":"STATE_INPUT","worker_id":"ae2b7ad4-66c1-4118-8aba-8445b272d997","data":{"client_object":true}}
 
@@ -6,9 +6,11 @@
 
 {"shared_action":"TERMINATE_WORKER", "worker_id":"ae2b7ad4-66c1-4118-8aba-8445b272d997"}
 
+{"shared_action":"REFRESH_WORKER", "worker_id":"ae2b7ad4-66c1-4118-8aba-8445b272d997"}
+
+{"shared_action":"LOAD_FROM_SPEC", "data":{"ic": {"version":4,"root_url":"https://www.catholicharbor.com"},"worker_type":"MESSENGER_WORKER", "input_dir":"test_output"}}
 
 
 
 
-
-{"shared_action":"DISPATCH_WORKER","data":{"ic": {"version":4,"root_url":"https://catholicharbor.com"},"worker_type":"TOPIC_WORKER"}}
+{"shared_action":"DISPATCH_WORKER","data":{"ic": {"version":4,"root_url":"https://www.catholicharbor.com"},"worker_type":"TOPIC_WORKER"}}

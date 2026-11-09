@@ -40,8 +40,8 @@ class TopicWorkerV4State:
                                       button_configs=[ButtonConfig("OK")])
 
 class TopicWorkerV4(IC4Worker):
-    def __init__(self, worker_id, ic):
-        super().__init__(worker_id, ic)
+    def __init__(self, worker_id, ic, output_dir):
+        super().__init__(worker_id, ic, output_dir)
 
     def execute(self):
         # Select messenger

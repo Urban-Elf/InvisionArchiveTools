@@ -21,20 +21,30 @@ import hashlib
 from datetime import UTC, datetime
 from ..file_tree import EXPORT_PATH
 import json
+from .. import serializable
 
 def hash_instant() -> str:
     now = datetime.now(UTC).isoformat()
     return hashlib.sha256(now.encode()).hexdigest()
 
-class Writer:
+class JSONWriter:
     @staticmethod
-    def write(content: Content) -> Path:
-        raise NotImplementedError()
-
-class JSONWriter(Writer):
-    @staticmethod
-    def write(content) -> str:
+    def write(content: Content) -> str:
+        """
+        Deprecated. Use write_json or write_ndjson instead.
+        """
         path: Path = EXPORT_PATH / (hash_instant() + ".json")
         with path.open("w", encoding="utf-8") as file:
             content.__ndjson_write__(file_obj=file)
         return str(path)
+    
+    @staticmethod
+    def write_json(obj: serializable.JSONSerializable, file_path: Path):
+        with file_path.open("w", encoding="utf-8") as file:
+            file.write(json.dumps(obj.__serialize__()))
+            file.flush()
+
+    @staticmethod
+    def write_ndjson(obj: serializable.NDJSONSerializable, file_path: Path):
+        with file_path.open("w", encoding="utf-8") as file:
+            obj.__ndjson_write__(file_obj=file)

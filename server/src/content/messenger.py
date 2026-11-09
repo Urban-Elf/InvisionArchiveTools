@@ -15,9 +15,15 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
-from .content import PostContent
+from ..serializable import JSONSerializable
+from .content import PostContent, UserData, Meta
 from ..shared_constants import ContentType
 
+# DEPRECATED
 class Messenger(PostContent):
+    def __init__(self, title):
+        super().__init__(title, ContentType.MESSENGER)
+
+class MessengerMeta(Meta):
     def __init__(self, title):
         super().__init__(title, ContentType.MESSENGER)

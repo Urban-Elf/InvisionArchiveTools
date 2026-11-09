@@ -18,14 +18,20 @@
 from enum import Enum, auto
 
 class ClientSA(Enum):
-    # data[ic, worker_type]
+    # data[ic, worker_type, output_dir]
     DISPATCH_WORKER = auto()
+    # data[ic, worker_type, input_dir]
+    LOAD_FROM_SPEC = auto()
+    # worker_id
+    REFRESH_WORKER = auto()
     # worker_id, data[client_object]
     STATE_INPUT = auto()
     # worker_id
     TERMINATE_WORKER = auto()
     # <none>
     TERMINATE = auto()
+    # <none>
+    DUMMY = auto()
 
 class ServerSA(Enum):
     # data[uuid]
@@ -58,4 +64,5 @@ class ButtonCallbackSA(Enum):
     NONE = auto()
     OPEN_LOG = auto()
     EXPORT_ARCHIVE = auto()
+    RESTART = auto()
     TERMINATE = auto()

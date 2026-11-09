@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+from pathlib import Path
 from .. import serializable
 from typing import TextIO
 import json
@@ -96,6 +97,37 @@ class Post(serializable.JSONSerializable):
             "reactions": self.reactions.__serialize__() if self.reactions else None
         }
     
+class Meta(serializable.JSONSerializable):
+    def __init__(self, title: str, type: ContentType):
+        self.title = title
+        self.type = type
+        self.userdata: dict[str, UserData] = {}
+
+    def __serialize__(self) -> dict:
+        return {
+            "type": self.type.name,
+            "title": self.title,
+            "user_data": {name: self.userdata[name].__serialize__() for name in self.userdata}
+        }
+    
+    @staticmethod
+    def from_dict(data: dict):
+        meta = Meta(data["title"], ContentType[data["type"]])
+        userdata = data["user_data"]
+        for name in userdata:
+            s_entry = userdata[name]
+            _userdata_entry = UserData(s_entry["profile_url"], s_entry["avatar_url"])
+            _userdata_entry.set_group(s_entry["group"])
+            _userdata_entry.set_group(s_entry["group"])
+            meta.userdata[name] = _userdata_entry
+        return meta
+    
+    @staticmethod
+    def deserialize(file: Path):
+        with open(file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return Meta.from_dict(data)
+
 class UserData(serializable.JSONSerializable):
     def __init__(self, profile_url: str, avatar_url: str):
         self.profile_url: str = profile_url
@@ -119,7 +151,19 @@ class UserData(serializable.JSONSerializable):
             "group_icon_url": self.group_icon_url
         }
 
+class PageContent(Content):
+    def __init__(self):
+        self.posts: list[Post] = []
+
+    def __ndjson_write__(self, file_obj: TextIO):
+        file_obj.write(json.dumps({"content":[post.__serialize__() for post in self.posts]}) + "\n")
+        file_obj.flush()
+
+# DEPRECATED
 class PostContent(Content):
+    """
+    Deprecated.
+    """
     def __init__(self, title: str, type: ContentType):
         self.title = title
         self.type = type

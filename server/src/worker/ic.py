@@ -15,6 +15,8 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+from .. import util
+
 class IC:
     def __init__(self, root_url):
         self.root_url = root_url
@@ -25,6 +27,10 @@ class IC:
 
     def messenger(self):
         """Returns a URL to the messenger app on the community."""
+        raise NotImplementedError()
+    
+    def is_messenger(self, url: str) -> bool:
+        """Checks if the given URL is a messenger URL for the community."""
         raise NotImplementedError()
     
     def profile(self, user_id: str):
@@ -56,6 +62,12 @@ class IC4(IC):
     def messenger(self):
         return self.messenger_url
     
+    def is_messenger(self, url: str):
+        stripped_url = util.strip_url(url)
+        stripped_messenger = util.strip_url(self.messenger())
+        util.log(util.LogLevel.DEBUG, f"Checking if URL is messenger: {self.messenger()} in {url} (prefix stripped in check)")
+        return stripped_messenger in stripped_url
+    
     def profile(self, user_id: str, username: str):
         return f"{self.root_url}/profile/{user_id}-{username.lower()}"
 
@@ -73,6 +85,9 @@ class IC5(IC):
     
     def messenger(self):
         return self.messenger_url
+    
+    def is_messenger(self, url: str):
+        return url.startswith(self.messenger_url)
     
     def profile(self, user_id, username):
         return f"{self.root_url}/profile/{user_id}-{username}"
