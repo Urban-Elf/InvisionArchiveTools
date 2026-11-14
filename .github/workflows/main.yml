@@ -36,11 +36,11 @@ jobs:
       run: |
         python dist-server.py
 
-    - name: Show build versions
+    - name: Inspect packaged Python libraries
       if: runner.os == 'macOS'
       working-directory: server
       run: |
-        python -m pip show pyinstaller pyinstaller-hooks-contrib cryptography
+        .venv/bin/python -m pip show pyinstaller pyinstaller-hooks-contrib cryptography
         find dist -name '_rust.abi3.so' -o -name 'libssl*.dylib' -o -name 'libcrypto*.dylib'
 
     - name: Archive server folder
