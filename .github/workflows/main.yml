@@ -54,6 +54,15 @@ jobs:
         nm -gU /usr/local/opt/openssl@3/lib/libssl.3.dylib | grep SSL_get0_group_name || true
         nm -gU dist/server/_internal/libssl.3.dylib | grep SSL_get0_group_name || true
 
+    - name: Test with matching OpenSSL libraries
+      if: runner.os == 'macOS'
+      working-directory: server
+      run: |
+        cp /usr/local/opt/openssl@3/lib/libssl.3.dylib dist/server/_internal/
+        cp /usr/local/opt/openssl@3/lib/libcrypto.3.dylib dist/server/_internal/
+        # Run your normal command that launches/tests the packaged server here
+        ./dist/server/server
+
     - name: Archive server folder
       working-directory: server/dist
       run: ${{ matrix.archive_cmd }}
