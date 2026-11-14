@@ -44,12 +44,15 @@ jobs:
         otool -L dist/server/_internal/libssl.3.dylib
         nm -gU dist/server/_internal/libssl.3.dylib | grep SSL_get0_group_name || true
 
-    - name: Inspect packaged Python libraries
+    - name: Compare bundled and Homebrew OpenSSL
       if: runner.os == 'macOS'
       working-directory: server
       run: |
-        .venv/bin/python -m pip show pyinstaller pyinstaller-hooks-contrib cryptography
-        find dist -name '_rust.abi3.so' -o -name 'libssl*.dylib' -o -name 'libcrypto*.dylib'
+        ls -l /usr/local/opt/openssl@3/lib/libssl.3.dylib /usr/local/opt/openssl@3/lib/libcrypto.3.dylib
+        shasum -a 256 /usr/local/opt/openssl@3/lib/libssl.3.dylib dist/server/_internal/libssl.3.dylib
+        shasum -a 256 /usr/local/opt/openssl@3/lib/libcrypto.3.dylib dist/server/_internal/libcrypto.3.dylib
+        nm -gU /usr/local/opt/openssl@3/lib/libssl.3.dylib | grep SSL_get0_group_name || true
+        nm -gU dist/server/_internal/libssl.3.dylib | grep SSL_get0_group_name || true
 
     - name: Archive server folder
       working-directory: server/dist
