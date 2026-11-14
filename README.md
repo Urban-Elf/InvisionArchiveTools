@@ -2,7 +2,7 @@
   <img src="https://github.com/Urban-Elf/InvisionArchiveTools/blob/main/app/src/main/resources/icon.svg" alt="Invision Archive Tools icon">
 
 <h3>Invision Archive Tools</h3>
-v1.0.3
+v1.1.0
 
   <p>&nbsp;</p>
 
