@@ -38,9 +38,9 @@ import java.util.concurrent.TimeUnit;
 
 public class PythonServer {
     private static final String TAG = "Server";
+
     private static final Path WINDOWS_INSTALLATION_PATH =
             Path.of("C:", "Program Files", "Invision Archive Tools", "app", "server", "server.exe");
-
     private static final Path SERVER_EXECUTABLE_PATH;
 
     static {
@@ -71,9 +71,16 @@ public class PythonServer {
             Files.setPosixFilePermissions(SERVER_EXECUTABLE_PATH, permissions);
         }
 
+        String path = SERVER_EXECUTABLE_PATH.toAbsolutePath().toString();
+
         // Start server process
-        process = new ProcessBuilder(SERVER_EXECUTABLE_PATH.toAbsolutePath().toString()) //, "--debug")
-                .start();
+        if (Core.DEBUG) {
+            process = new ProcessBuilder(path, "--debug")
+                    .start();
+        } else {
+            process = new ProcessBuilder(path)
+                    .start();
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // Send TERMINATE signal
@@ -93,6 +100,7 @@ public class PythonServer {
                     process.destroyForcibly();
                 }
             } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }, "Server-ShutdownHook"));
 
@@ -134,6 +142,14 @@ public class PythonServer {
     }
 
     public static void writePacket(ClientPacket packet) {
+        writePacket(packet, true);
+    }
+
+    public static void silentWritePacket(ClientPacket packet) {
+        writePacket(packet, false);
+    }
+
+    private static void writePacket(ClientPacket packet, boolean log) {
         if (process == null)
             throw new IllegalStateException("Not initialized, call #initialize() first");
         try {
@@ -142,7 +158,10 @@ public class PythonServer {
             out.write(jsonString.getBytes());
             out.write("\n".getBytes()); // Crucial
             out.flush();
-            Core.debug(TAG, "stdin >> " + jsonString);
+            // optionally log
+            if (log) {
+                Core.debug(TAG, "stdin >> " + jsonString);
+            }
         } catch (IOException e) {
             listeners.forEach(listener -> listener.exceptionThrown(e));
         }

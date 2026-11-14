@@ -19,13 +19,25 @@
 
 package com.urbanelf.iat.content.parser;
 
-import com.urbanelf.iat.content.model.Content;
+import com.urbanelf.iat.content.model.Meta;
+import com.urbanelf.iat.content.model.RefreshSpec;
+import com.urbanelf.iat.content.model.messenger.MessengerMeta;
+import com.urbanelf.iat.content.model.messenger.MessengerRefreshSpec;
+import com.urbanelf.iat.ic.ICUnsupportedException;
 
-import org.json.JSONObject;
+import org.json.JSONException;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.file.Path;
 
-public interface Parser {
-    Content parse(JSONObject header, BufferedReader reader) throws IOException;
+public class MessengerSpecParser extends SpecParser {
+    @Override
+    public Meta parseMetadata(Path path) throws IOException, JSONException {
+        return new MessengerMeta(parseJsonFile(path));
+    }
+
+    @Override
+    public RefreshSpec parseRefreshSpec(Path path) throws IOException, JSONException, ICUnsupportedException {
+        return new MessengerRefreshSpec(parseJsonFile(path));
+    }
 }

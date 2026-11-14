@@ -19,33 +19,32 @@
 
 package com.urbanelf.iat.content.parser;
 
-import com.urbanelf.iat.content.model.Content;
-import com.urbanelf.iat.content.model.PostContent;
 import com.urbanelf.iat.content.model.Post;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 
-public class PostParser implements Parser {
+public class MessengerPageParser extends PageParser {
     @Override
-    public Content parse(JSONObject header, BufferedReader reader) throws IOException {
-        // Parse header (handled by content)
-        final PostContent content = new PostContent(header);
-
-        // Parse pages (NDJSON)
-        String line;
-        while ((line = reader.readLine()) != null) {
-            final JSONObject pageObject = new JSONObject(line);
-            final JSONArray postsObject = pageObject.getJSONArray(Content.PAGE_CONTENT);
+    public ArrayList<Post> parse(Path pagePath) throws IOException, ArchiveParseException {
+        try (BufferedReader reader = Files.newBufferedReader(pagePath)) {
+            String line = reader.readLine();
+            if (line == null)
+                throw new ArchiveParseException("page parse failed: input is null");
+            final JSONObject json = new JSONObject(line);
+            final JSONArray postsObject = json.getJSONArray(PAGE_CONTENT);
             final ArrayList<Post> page = new ArrayList<>();
             postsObject.forEach(o -> page.add(new Post((JSONObject) o)));
-            content.getPages().add(page);
+            return page;
+        } catch (JSONException e) {
+            throw new ArchiveParseException("page parse failed: corrupt json");
         }
-
-        return content;
     }
 }

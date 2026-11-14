@@ -27,11 +27,12 @@ import org.json.JSONException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class WriterDispatcher {
-    public static File write(ContentSpec spec, File dst, ArchiveFormat format) throws IOException, JSONException {
-        final ContentType contentType = spec.type();
+    public static Path write(ContentSpec spec, Path dst, ArchiveFormat format, WriterTracker tracker) throws IOException, JSONException {
+        final ContentType contentType = spec.meta().getContentType();
         // Write content to dst
-        return contentType.getWriterMap().get(format).write(spec.content(), dst);
+        return contentType.createWriter(format).write(spec, dst, tracker);
     }
 }

@@ -19,10 +19,12 @@
 
 package com.urbanelf.iat;
 
-import com.urbanelf.iat.content.ArchiveFormat;
+import com.urbanelf.iat.auth.CredentialManager;
 import com.urbanelf.iat.content.parser.ContentSpec;
-import com.urbanelf.iat.content.writer.WriterDispatcher;
+import com.urbanelf.iat.ui.ArchiveExporter;
 import com.urbanelf.iat.proto.PythonServer;
+import com.urbanelf.iat.ui.ArchiveRecoverer;
+import com.urbanelf.iat.ui.CustomFileChooser;
 import com.urbanelf.iat.ui.MainFrame;
 import com.urbanelf.iat.ui.TOSFrame;
 import com.urbanelf.iat.util.ArrayUtils;
@@ -33,15 +35,11 @@ import com.urbanelf.iat.util.FileTree;
 import com.urbanelf.iat.util.LocalStorage;
 import com.urbanelf.iat.util.Logger;
 import com.urbanelf.iat.util.PlatformUtils;
-import com.urbanelf.iat.util.StringUtils;
 import com.urbanelf.iat.util.ThemeManager;
 import com.urbanelf.iat.util.function.QuadConsumer;
 import com.urbanelf.iat.util.function.TriConsumer;
 
 import java.awt.Desktop;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.event.WindowEvent;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -58,46 +56,28 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
+import javax.annotation.Nonnull;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.stage.FileChooser;
 
-import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileNameExtensionFilter;
-
 public class Core {
     private static final String TAG = Core.class.getSimpleName();
+    public static final boolean DEBUG = true;
 
     public static final String DEVELOPER_EMAIL = "support.resolved615@aleeas.com";
     private static final String LS_AGREED_TO_TERMS = "agreed_to_terms";
 
     public static final int SCROLL_UNIT_INCREMENT = 16;
     public static final int SCROLL_BLOCK_INCREMENT = 32;
-
-    private static FileChooser FILE_CHOOSER;
-
-    private static final int OPEN_MULTIPLE = 1;
-    private static final int OPEN = 2;
-    private static final int SAVE = 3;
-    private static boolean USE_SWING_FILE_CHOOSERS = true;
 
     private static FileLock lock;
     private static FileChannel channel;
@@ -108,28 +88,7 @@ public class Core {
     private static File fatalLogFile;
     private static PrintStream logStream;
 
-    private static final JPanel exportArchivePanel;
-    private static final JComboBox<ArchiveFormat> archiveFileFormat;
-
-    static {
-        exportArchivePanel = new JPanel(new GridBagLayout());
-
-        final JPanel formatPanel = new JPanel();
-        formatPanel.setLayout(new BoxLayout(formatPanel, BoxLayout.X_AXIS));
-        archiveFileFormat = new JComboBox<>(ArchiveFormat.values());
-        formatPanel.add(new JLabel("File Format: "));
-        formatPanel.add(Box.createHorizontalStrut(4));
-        formatPanel.add(archiveFileFormat);
-
-        exportArchivePanel.add(formatPanel, new GridBagConstraints() {
-            {
-                this.gridx = 0;
-                this.gridy = 0;
-                this.weightx = 1;
-                this.fill = HORIZONTAL;
-            }
-        });
-    }
+    private static ArchiveExporter archiveExporter;
 
     private static boolean lockInstance(Path lockFilePath) {
         try {
@@ -156,115 +115,6 @@ public class Core {
             return true;
         } catch (IOException e) {
             return false;
-        }
-    }
-
-    public static void exportArchive(JFrame parent, ContentSpec spec) {
-        exportArchive(parent, spec, false);
-    }
-
-    public static void exportArchive(JFrame parent, ContentSpec spec, boolean destroyOnFinish) {
-        // Custom button labels
-        String[] options = {"Cancel", "OK"};
-
-        SwingUtilities.updateComponentTreeUI(exportArchivePanel);
-        exportArchivePanel.revalidate();
-        exportArchivePanel.repaint();
-
-        int result = JOptionPane.showOptionDialog(
-                parent,
-                exportArchivePanel,
-                "Export archive...",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                options,
-                options[1]
-        );
-
-        if (result == 1) {
-            final CompletableFuture<Void> fxTask = new CompletableFuture<>();
-
-            final boolean isEDT = SwingUtilities.isEventDispatchThread();
-
-            Platform.runLater(() -> {
-                try {
-                    // Resolve format
-                    final ArchiveFormat format = (ArchiveFormat) Objects.requireNonNull(archiveFileFormat.getSelectedItem());
-                    // Resolve destination
-                    final File dst = Core.saveFile(StringUtils.cleanFileName(spec.content().getTitle()) + '.' + format.getExtension(),
-                            format.getExtensionFilter());
-                    if (dst == null) {
-                        final CompletableFuture<Void> exportCancelledTask = new CompletableFuture<>();
-                        SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(parent,
-                                    "Operation cancelled.",
-                                    "Export Archive...",
-                                    JOptionPane.INFORMATION_MESSAGE);
-                            exportCancelledTask.complete(null);
-                        });
-                        try {
-                            exportCancelledTask.get();
-                        } catch (Exception ex) {
-                        }
-                        Core.info(TAG, "Export canceled.");
-                        fxTask.complete(null);
-                        return;
-                    }
-                    final File outputDir;
-                    if (format == ArchiveFormat.JSON) {
-                        // Edge case: copy file (already stored as JSON)
-                        Files.copy(spec.file().toPath(), dst.toPath());
-                        outputDir = dst.getParentFile();
-                    } else {
-                        // Convert file
-                        outputDir = WriterDispatcher.write(spec, dst, format);
-                    }
-                    // Delete temp file
-                    spec.file().deleteOnExit();
-
-                    // Notify success
-                    SwingUtilities.invokeLater(() -> {
-                        Object[] options2 = {"Open Directory", "Close"};
-                        int result2 = JOptionPane.showOptionDialog(
-                                parent,
-                                "Archive exported successfully.",
-                                "Export Finished",
-                                JOptionPane.DEFAULT_OPTION,
-                                JOptionPane.INFORMATION_MESSAGE,
-                                null,
-                                options2,
-                                options2[1]
-                        );
-                        if (result2 == 0) {
-                            try {
-                                Desktop.getDesktop().open(outputDir);
-                            } catch (IOException e) {
-                                Core.error(TAG, "Failed to open output directory", e);
-                            }
-                        }
-                        // Destroy frame
-                        if (parent != null && destroyOnFinish)
-                            parent.dispatchEvent(new WindowEvent(parent, WindowEvent.WINDOW_CLOSING));
-                        // Already exits [early] if running on EDT (see below)
-                        if (!isEDT)
-                            fxTask.complete(null);
-                    });
-                    // Prevents deadlock
-                    if (isEDT)
-                        fxTask.complete(null);
-                } catch (Exception ex) {
-                    Core.fatal(TAG, "Failed to export archive", ex);
-                    fxTask.completeExceptionally(ex);
-                }
-            });
-
-            // Wait for JavaFX task to complete (blocks current thread)
-            try {
-                fxTask.get();
-            } catch (Exception ex) {
-                Core.error(TAG, "Error while waiting on FX export task", ex);
-            }
         }
     }
 
@@ -376,37 +226,55 @@ public class Core {
             });
         });
 
+        // Initialize LocalStorage
         Benchmark.begin();
-        final ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(1);
-        scheduledExecutor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+        LocalStorage.initialize();
+        Core.info(TAG, "Initialized LocalStorage [" + Benchmark.end() + "ms]");
 
-        // Periodic log purge task
-        scheduledExecutor.scheduleAtFixedRate(() -> {
-            try (Stream<Path> files = Files.list(FileTree.getLogPath())) {
-                files.filter(Files::isRegularFile)
-                        .filter(path -> path.getFileName().toString().contains(logFileNameRaw))
-                        .forEach(path -> {
-                            try {
-                                final BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
-                                // 30-day log lifespan
-                                if (ChronoUnit.DAYS.between(attr.creationTime().toInstant(), Instant.now()) >= 30L) {
-                                    Files.deleteIfExists(path);
-                                    info(TAG, "Purged log '" + path + "'");
+        Benchmark.begin();
+        ScheduledThreadPoolExecutor scheduledExecutor = null;
+
+        // Periodic log purge task (unless ls flag is set)
+        if (!LocalStorage.getJsonObject().has("preserve_logs")) {
+            scheduledExecutor = new ScheduledThreadPoolExecutor(1);
+            scheduledExecutor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+
+            scheduledExecutor.scheduleAtFixedRate(() -> {
+                try (Stream<Path> files = Files.list(FileTree.getLogPath())) {
+                    files.filter(Files::isRegularFile)
+                            .filter(path -> path.getFileName().toString().contains(logFileNameRaw))
+                            .forEach(path -> {
+                                try {
+                                    final BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
+                                    // 30-day log lifespan
+                                    if (ChronoUnit.DAYS.between(attr.creationTime().toInstant(), Instant.now()) >= 30L) {
+                                        Files.deleteIfExists(path);
+                                        info(TAG, "Purged log '" + path + "'");
+                                    }
+                                } catch (IOException e) {
+                                    error(TAG, "An error occurred while attempting to read attributes of log file " + path, e);
                                 }
-                            } catch (IOException e) {
-                                error(TAG, "An error occurred while attempting to read attributes of log file " + path, e);
-                            }
-                        });
-            } catch (IOException e) {
-                error(TAG, "Error while trying to index log directory for purge", e);
-            }
-        }, 0, 1, TimeUnit.HOURS);
+                            });
+                } catch (IOException e) {
+                    error(TAG, "Error while trying to index log directory for purge", e);
+                }
+            }, 0, 1, TimeUnit.HOURS);
+        }
         Core.info(TAG, "Started executor service [" + Benchmark.end() + "ms]");
+
+        // final copy to pass to shutdown hook thread
+        final ScheduledThreadPoolExecutor scheduledExecutor2 = scheduledExecutor;
+
+        // Init archive exporter, recoverer
+        archiveExporter = new ArchiveExporter();
 
         // Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logStream.close();
-            scheduledExecutor.shutdown();
+            archiveExporter.shutdown();
+            if (scheduledExecutor2 != null)
+                scheduledExecutor2.shutdown();
+            CredentialManager.shutdown();
             Core.info(TAG, "Session ended on " + DateUtils.date());
         }, "Core-ShutdownHook"));
 
@@ -423,23 +291,15 @@ public class Core {
         // Setup default LaF
         ThemeManager.applyDefaultTheme();
 
-        Benchmark.begin();
-
-        new Thread(() -> {
+        SwingUtilities.invokeLater(() -> {
             try {
                 new JFXPanel(); // Initialize JavaFX
-                Core.info(TAG, "Initialized JavaFX [" + Benchmark.end() + "ms]");
-                Platform.runLater(() -> {
-                    FILE_CHOOSER = new FileChooser();
-                    FILE_CHOOSER.setInitialDirectory(new File(System.getProperty("user.home")));
-                });
-                USE_SWING_FILE_CHOOSERS = false;
-            } catch (Exception ignored) {
-                Core.warning(TAG, "JavaFX failed to initialize, falling back");
+                Core.info(TAG, "Initialized JavaFX");
+                CustomFileChooser.USE_SWING_FILE_CHOOSERS.set(false);
+            } catch (Exception | LinkageError e) {
+                Core.error(TAG, "JavaFX failed to initialize; falling back to Swing alternatives", e);
             }
-        }, "JavaFX-Init").start();
 
-        SwingUtilities.invokeLater(() -> {
             if (LocalStorage.getJsonObject().has(LS_AGREED_TO_TERMS)) {
                 new MainFrame(); // Automatically shows
             } else {
@@ -455,92 +315,27 @@ public class Core {
         });
     }
 
-    public static File openFile(FileChooser.ExtensionFilter... extensionFilters) {
-        if (USE_SWING_FILE_CHOOSERS) {
-            final List<File> result = showFileChooser(OPEN, "Open File", System.getProperty("user.home"), null, extensionFilters);
-            return !result.isEmpty() ? result.get(0) : null;
-        }
-        FILE_CHOOSER.setTitle("Open File");
-        if (extensionFilters != null && extensionFilters.length != 0) {
-            FILE_CHOOSER.getExtensionFilters().clear();
-            FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
-            FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
-            FILE_CHOOSER.setSelectedExtensionFilter(extensionFilters[0]);
-        }
-        return FILE_CHOOSER.showOpenDialog(null);
+
+
+    public static void exportArchive(JFrame frame, ContentSpec spec, boolean destroyOnFinish) {
+        exportArchive(frame, spec, destroyOnFinish, e -> {});
     }
 
-    public static File saveFile(String initialFileName, FileChooser.ExtensionFilter... extensionFilters) {
-        if (USE_SWING_FILE_CHOOSERS) {
-            final List<File> result = showFileChooser(SAVE, "Save Archive", System.getProperty("user.home"), initialFileName, extensionFilters);
-            return !result.isEmpty() ? result.get(0) : null;
-        }
-        FILE_CHOOSER.setTitle("Save Archive");
-        FILE_CHOOSER.setInitialFileName(initialFileName);
-        if (extensionFilters != null && extensionFilters.length != 0) {
-            FILE_CHOOSER.getExtensionFilters().clear();
-            FILE_CHOOSER.getExtensionFilters().addAll(extensionFilters);
-            FILE_CHOOSER.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
-            FILE_CHOOSER.setSelectedExtensionFilter(extensionFilters[0]);
-        }
-        return FILE_CHOOSER.showSaveDialog(null);
+    public static void exportArchive(JFrame frame, ContentSpec spec, Consumer<ArchiveExporter.ExportResult> onCompletion) {
+        exportArchive(frame, spec, false, onCompletion);
     }
 
-    /* Opens a swing JFileChooser
-     * returns:
-     * if multiple selection mode the list of Files selected
-     * if single selection mode a list with one File Object
-     * if nothing selected or dialog is cancelled:
-     *    an empty list
-     */
-    private static List<File> showFileChooser(
-            int mode, String title, String defaultPath, String initialFileName,
-            FileChooser.ExtensionFilter... extensionFilters) {
-
-        JFileChooser fileChooser = new JFileChooser(defaultPath);
-        fileChooser.setDialogTitle(title);
-
-        // Add filters
-        if (extensionFilters != null) {
-            fileChooser.setAcceptAllFileFilterUsed(false);
-            for (FileChooser.ExtensionFilter fxFilter : extensionFilters) {
-                String desc = fxFilter.getDescription();
-                String[] exts = fxFilter.getExtensions().stream()
-                        .map(ext -> ext.startsWith("*.") ? ext.substring(2) : ext) // ".json"
-                        .toArray(String[]::new);
-                fileChooser.addChoosableFileFilter(new FileNameExtensionFilter(desc, exts));
-            }
-            if (fileChooser.getChoosableFileFilters().length > 0) {
-                fileChooser.setFileFilter(fileChooser.getChoosableFileFilters()[0]);
-            }
-        }
-
-        int res;
-        if (mode == OPEN_MULTIPLE) {
-            fileChooser.setMultiSelectionEnabled(true);
-            res = fileChooser.showOpenDialog(null);
-        } else if (mode == OPEN) {
-            fileChooser.setMultiSelectionEnabled(false);
-            res = fileChooser.showOpenDialog(null);
-        } else {
-            // SAVE mode → set default filename if provided
-            if (initialFileName != null && !initialFileName.isEmpty()) {
-                fileChooser.setSelectedFile(new File(defaultPath, initialFileName));
-            }
-            res = fileChooser.showSaveDialog(null);
-        }
-
-        List<File> result = new ArrayList<>();
-        if (res == JFileChooser.APPROVE_OPTION) {
-            if (fileChooser.isMultiSelectionEnabled()) {
-                Collections.addAll(result, fileChooser.getSelectedFiles());
-            } else {
-                result.add(fileChooser.getSelectedFile());
-            }
-        }
-        return result;
+    public static void exportArchive(JFrame frame, ContentSpec spec, boolean destroyOnFinish, @Nonnull Consumer<ArchiveExporter.ExportResult> onCompletion) {
+        archiveExporter.exportArchive(frame, spec, destroyOnFinish, onCompletion);
     }
 
+    public static File openFile(String title, FileChooser.ExtensionFilter... extensionFilters) {
+        return CustomFileChooser.openFile(title, extensionFilters);
+    }
+
+    public static File saveFile(String title, String initialFileName, FileChooser.ExtensionFilter... extensionFilters) {
+        return CustomFileChooser.saveFile(title, initialFileName, extensionFilters);
+    }
 
     private static void initializeLogSystem() throws IOException {
         final Stream<Path> files = Files.list(FileTree.getLogPath());

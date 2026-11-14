@@ -26,18 +26,26 @@ import org.json.JSONObject;
 
 public class ICWorkerState {
     public static final ICWorkerState CONNECTING = new ICWorkerState(
-            "Connecting to ChromeDriver...", "This may take a while on the first run.", null, true);
+            "Connecting to ChromeDriver...", "This may take a while on the first run.", null, true, true);
+    public static final ICWorkerState REFRESHING = new ICWorkerState(
+            "Refreshing ChromeDriver...", "Your progress will be saved!", null, true, true);
 
     private final String note;
     private final String hint;
     private final ButtonConfig[] buttonConfigs;
     private final boolean indeterminate;
+    private final boolean progressive;
 
-    public ICWorkerState(String note, String hint, ButtonConfig[] buttonConfigs, boolean indeterminate) {
+    public ICWorkerState(String note, String hint, ButtonConfig[] buttonConfigs) {
+        this(note, hint, buttonConfigs, true, false);
+    }
+
+    public ICWorkerState(String note, String hint, ButtonConfig[] buttonConfigs, boolean indeterminate, boolean progressive) {
         this.note = note;
         this.hint = hint;
         this.buttonConfigs = buttonConfigs;
         this.indeterminate = indeterminate;
+        this.progressive = progressive;
     }
 
     public ICWorkerState(JSONObject jsonObject) {
@@ -57,6 +65,7 @@ public class ICWorkerState {
             buttonConfigs = null;
         }
         indeterminate = jsonObject.getBoolean("indeterminate");
+        progressive = jsonObject.getBoolean("progressive");
     }
 
     public String getNote() {
@@ -68,7 +77,7 @@ public class ICWorkerState {
     }
 
     public boolean isProgressive() {
-        return getButtonConfigs() == null;
+        return progressive;
     }
 
     public ButtonConfig[] getButtonConfigs() {

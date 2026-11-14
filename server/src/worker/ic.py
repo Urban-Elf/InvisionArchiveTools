@@ -16,8 +16,9 @@
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
 from .. import util
+from ..serializable import JSONSerializable
 
-class IC:
+class IC(JSONSerializable):
     def __init__(self, root_url):
         self.root_url = root_url
 
@@ -33,12 +34,18 @@ class IC:
         """Checks if the given URL is a messenger URL for the community."""
         raise NotImplementedError()
     
-    def profile(self, user_id: str):
+    def profile(self, user_id: str, username: str):
         """Returns a URL to the profile page for the given user ID."""
         raise NotImplementedError()
 
     def get_version_number(self):
         raise NotImplementedError()
+
+    def __serialize__(self) -> dict:
+        return {
+            "version": self.get_version_number(),
+            "root_url": self.root_url
+        }
 
     @staticmethod
     def PHP_data(url: str, data: str):
@@ -94,3 +101,17 @@ class IC5(IC):
 
     def get_version_number(self):
         return 5
+
+IC_VERSION_MAP = {
+    4: IC4,
+    5: IC5
+}
+
+def validate_version(version: int):
+    assert type(version) is int, "'version' must be of type int"
+    version = int(version)
+    assert version == 4 or version == 5, "'version' must be of value 4 or 5"
+
+def get_ic_by_version(version: int):
+    validate_version(version)
+    return IC_VERSION_MAP[version]

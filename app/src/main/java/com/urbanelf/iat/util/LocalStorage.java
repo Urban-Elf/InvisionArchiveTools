@@ -23,6 +23,7 @@ import com.urbanelf.iat.Core;
 
 import org.json.JSONObject;
 
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,18 +32,12 @@ import java.nio.file.Path;
 public class LocalStorage {
     private static final String TAG = LocalStorage.class.getSimpleName();
 
-    private static final Path FILE;
-    private static JSONObject JSON_OBJECT;
+    private static Path FILE;
+    private static JSONObject JSON_OBJECT = new JSONObject();
 
-    private LocalStorage() {
-    }
-
-    static {
+    public static void initialize() {
         FILE = FileTree.getRootPath().resolve("shared.json");
-        JSON_OBJECT = new JSONObject();
-
-
-
+        // Deserialize
         if (Files.exists(FILE))
             deserialize();
     }
@@ -52,8 +47,8 @@ public class LocalStorage {
     }
 
     public static void serialize() {
-        try (FileWriter file = new FileWriter(FILE.toFile())) {
-            file.write(JSON_OBJECT.toString(4));
+        try (BufferedWriter writer = Files.newBufferedWriter(FILE)) {
+            writer.write(JSON_OBJECT.toString(4));
             // auto-flushed and closed
         } catch (IOException e) {
             Core.error(TAG, "Error serializing " + FILE, e);

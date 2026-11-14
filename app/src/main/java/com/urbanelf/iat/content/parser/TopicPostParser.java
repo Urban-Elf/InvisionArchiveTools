@@ -19,21 +19,14 @@
 
 package com.urbanelf.iat.content.parser;
 
-import com.urbanelf.iat.content.model.Content;
-import com.urbanelf.iat.content.model.PostContent;
-import com.urbanelf.iat.content.model.topic.TopicPostContent;
+public class TopicPostParser extends SpecParser {
 
-import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-
-public class TopicPostParser implements Parser {
-    @Override
+    /*
     public Content parse(JSONObject header, BufferedReader reader) throws IOException {
         // Parse header (handled by content)
         final PostContent content = new PostContent(header);
         // Further header parsing
         return new TopicPostContent(content, header);
-    }
+    }*/
 }

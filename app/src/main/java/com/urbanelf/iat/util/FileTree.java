@@ -21,6 +21,7 @@ package com.urbanelf.iat.util;
 
 import com.urbanelf.iat.Core;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -41,6 +42,7 @@ public class FileTree {
     private static final Path logPath;
     private static final Path serverPath;
     private static final Path exportPath;
+    private static final Path corruptedExportsPath;
 
     private FileTree() {
     }
@@ -56,11 +58,13 @@ public class FileTree {
         logPath = rootPath.resolve("logs");
         serverPath = rootPath.resolve("server");
         exportPath = rootPath.resolve("export");
+        corruptedExportsPath = rootPath.resolve("corrupted_exports");
 
         try {
             Files.createDirectories(logPath); // Build hierarchy
             // Server path is created automatically
             Files.createDirectories(exportPath);
+            Files.createDirectories(corruptedExportsPath);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -98,6 +102,36 @@ public class FileTree {
         });
     }
 
+    /** Checks for safe destination paths, appending " (1)", " (2)", etc. to the name. */
+    public static Path resolveDestinationDirectory(Path dst) {
+        Path fileName = dst.getFileName();
+        if (fileName == null) {
+            throw new IllegalArgumentException("Destination must have a file name: " + dst);
+        }
+
+        String baseName;
+        if (Files.isDirectory(dst)) {
+            baseName = dst.getFileName().toString();
+        } else {
+            baseName = StringUtils.removeExtension(fileName.toString());
+        }
+
+        for (int i = 0; ; i++) {
+            String candidateName = baseName + (i == 0 ? "" : " (" + i + ")");
+            Path candidate = dst.resolveSibling(candidateName);
+
+            if (!Files.exists(candidate)) {
+                return candidate;
+            }
+        }
+    }
+
+    public static boolean isEmptyDirectory(Path path) throws IOException {
+        try (var entries = Files.list(path)) {
+            return entries.findAny().isEmpty();
+        }
+    }
+
     public static Path getRootPath() {
         return rootPath;
     }
@@ -112,5 +146,9 @@ public class FileTree {
 
     public static Path getExportPath() {
         return exportPath;
+    }
+
+    public static Path getCorruptedExportsPath() {
+        return corruptedExportsPath;
     }
 }

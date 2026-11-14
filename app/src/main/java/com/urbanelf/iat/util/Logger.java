@@ -77,6 +77,8 @@ public interface Logger {
 
     void debug(String tag, String message);
 
+    void printStackTrace(Throwable throwable);
+
     default String getMessageString(Severity severity, String tag, String message) {
         return getMessageString(severity, tag, message, null);
     }
@@ -84,7 +86,7 @@ public interface Logger {
     default String getMessageString(Severity severity, String tag, String message, Throwable throwable) {
         return "[" + Thread.currentThread().getName() + "] " + severity + " " + DateUtils.timestamp() + " " + tag + " - "
             + (message == null || message.isEmpty() ? "" : message) + (throwable != null ?
-            (message == null || message.isEmpty() ? "" : ":\n") + LogUtils.stackTrace(throwable) : "");
+            (message == null || message.isEmpty() ? "" : ":\n") : "");
     }
 
     enum Severity {

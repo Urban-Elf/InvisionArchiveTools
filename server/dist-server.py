@@ -43,13 +43,15 @@ def build():
         "--collect-all", "bs4",
         "--hidden-import", "certifi",
         "--collect-all", "certifi",
+        "--hidden-import", "tkinter",
+        "--hidden-import", "tkinter.simpledialog",
         "--log-level", "WARN",
         #"--debug", "imports",
         "--noconfirm"
     ]
     #run([venv_python, "-m", "PyInstaller", SPEC_FILE, "--noconfirm"])
 
-    # If on macOS, build as x86_64
+    # If on macOS, build as x86_64 # TODO: Make this amd64 later, as it is the modern standard
     if sys.platform == "darwin":
         args += ["--target-arch", "x86_64"]
 

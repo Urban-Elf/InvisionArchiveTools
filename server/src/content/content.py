@@ -96,7 +96,7 @@ class Post(serializable.JSONSerializable):
             "content": self.content,
             "reactions": self.reactions.__serialize__() if self.reactions else None
         }
-    
+
 class Meta(serializable.JSONSerializable):
     def __init__(self, title: str, type: ContentType):
         self.title = title
@@ -127,6 +127,7 @@ class Meta(serializable.JSONSerializable):
         with open(file, "r", encoding="utf-8") as f:
             data = json.load(f)
             return Meta.from_dict(data)
+        return None
 
 class UserData(serializable.JSONSerializable):
     def __init__(self, profile_url: str, avatar_url: str):
@@ -158,6 +159,23 @@ class PageContent(Content):
     def __ndjson_write__(self, file_obj: TextIO):
         file_obj.write(json.dumps({"content":[post.__serialize__() for post in self.posts]}) + "\n")
         file_obj.flush()
+
+class PostCount(serializable.JSONSerializable):
+    def __init__(self, count: int):
+        self.count = count
+
+    def __serialize__(self) -> dict:
+        return {
+            "total_posts": self.count
+        }
+
+    @staticmethod
+    def deserialize(file: Path):
+        with open(file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            count = data["total_posts"]
+            return PostCount(count)
+        return None
 
 # DEPRECATED
 class PostContent(Content):

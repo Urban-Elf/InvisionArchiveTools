@@ -19,26 +19,29 @@
 
 package com.urbanelf.iat.content.writer.html;
 
-import com.urbanelf.iat.content.model.Content;
-import com.urbanelf.iat.content.model.PostContent;
-import com.urbanelf.iat.content.model.Post;
+import com.urbanelf.iat.content.model.Meta;
 import com.urbanelf.iat.content.model.UserData;
+import com.urbanelf.iat.content.parser.ContentSpec;
+import com.urbanelf.iat.content.parser.PageParser;
+import com.urbanelf.iat.content.writer.WriterTracker;
+import com.urbanelf.iat.util.FileTree;
 import com.urbanelf.iat.util.NumberUtils;
 
 import org.json.JSONObject;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MessengerHTMLWriter extends HTMLWriter {
     private static final String RES_PATH = PATH_PREFIX + "messenger/res";
@@ -47,51 +50,62 @@ public class MessengerHTMLWriter extends HTMLWriter {
     private static final String PAGE_TEMPLATE_PATH =  "messenger/page";
 
     @Override
-    public File writeHTML(TemplateEngine engine, Content content, File dst) throws IOException {
+    public Path writeHTML(TemplateEngine engine, ContentSpec spec, Path dst, WriterTracker tracker) throws IOException {
         // Content should always be PostContent for messengers
-        final PostContent postContent = (PostContent) content;
+
+        Path path = spec.path();
+        Meta meta = spec.meta();
 
         // Establish destination directory
-        final File dstDirectory = resolveDestinationDirectory(dst);
+        final Path dstPath = FileTree.resolveDestinationDirectory(dst);
         // Build hierarchy
-        dstDirectory.mkdirs();
-        final File resDirectory = new File(dstDirectory, "res");
-        resDirectory.mkdir();
-        final Path resPath = resDirectory.toPath();
-        final File pageDirectory = new File(dstDirectory, "page");
-        pageDirectory.mkdir();
+        Files.createDirectories(dstPath);
+        final Path resPath = dstPath.resolve( "res");
+        Files.createDirectories(resPath);
+        final Path pagePath = dstPath.resolve("page");
+        Files.createDirectories(pagePath);
 
         // Create context
         final Context context = new Context();
 
         // Generic access fields
-        final ArrayList<ArrayList<? extends Post>> pages = postContent.getPages();
-        final HashMap<String, UserData> userData = postContent.getUserData();
+        final HashMap<String, UserData> userData = meta.getUserData();
 
         // Process resources (localize avatar paths, etc)
-        postContent.flatten(resPath);
+        meta.flatten(resPath);
 
         // Populate generic fields
-        context.setVariable("title", postContent.getTitle());
+        context.setVariable("title", meta.getTitle());
         context.setVariable("userData", userData);
 
+        // Render page partials
+        PageParser pageParser = spec.meta().getContentType().getPageParser();
+        long totalPages = pageParser.countPages(path);
+        final AtomicLong counter = new AtomicLong(1);
+
+        // Tracker scoring
+        AtomicLong trackerScore = new AtomicLong();
+        final long trackerScoreTotal = totalPages + 1; // +1 is res copy & index render
+        tracker.maximumCalculated(trackerScoreTotal);
+
         // Statistics
-        final int totalPosts = pages.stream()
-                .mapToInt(List::size)
-                .sum();
+        int totalPostCount = Math.toIntExact(totalPages * POSTS_PER_PAGE);
+        if (spec.postCount() != null)
+            totalPostCount = spec.postCount().count();
+
         final String statistics = userData.size()
                 + " participant" + (userData.size() == 1 ? "" : "s")
-                + " • " + NumberUtils.formatDelimiter(totalPosts) + " posts";
+                + " • " + NumberUtils.formatDelimiter(totalPostCount) + " posts";
         // Set variable
         context.setVariable("stats", statistics);
 
-        // Render page partials
         try {
-            final AtomicInteger counter = new AtomicInteger(1);
-            pages.forEach(page -> {
+            tracker.messageUpdate("Writing pages...");
+
+            pageParser.parseDirectory(path, page -> {
                 // Manifest
                 final JSONObject manifest = new JSONObject();
-                manifest.put("totalPages", pages.size());
+                manifest.put("totalPages", totalPages);
                 manifest.put("page", counter.get());
                 context.setVariable("manifest", manifest.toString(4));
 
@@ -99,8 +113,7 @@ public class MessengerHTMLWriter extends HTMLWriter {
                 context.setVariable("posts", page);
 
                 // Render page
-                try (Writer writer = new FileWriter(new File(pageDirectory, counter.get() + ".html"),
-                        StandardCharsets.UTF_8)) {
+                try (BufferedWriter writer = Files.newBufferedWriter(pagePath.resolve(counter.get() + ".html"))) {
                     engine.process(PAGE_TEMPLATE_PATH, context, writer);
                 } catch (IOException e) {
                     // Smuggle exception
@@ -109,6 +122,12 @@ public class MessengerHTMLWriter extends HTMLWriter {
 
                 // Increment counter
                 counter.getAndIncrement();
+
+                // Tracking score
+                tracker.messageUpdate("Writing pages... (" + (int) (100L * counter.get() / totalPages) + "%)");
+
+                trackerScore.getAndIncrement();
+                tracker.progressChanged(trackerScore.get());
             });
         } catch (RuntimeException ex) {
             if (ex.getCause() instanceof IOException) {
@@ -117,15 +136,22 @@ public class MessengerHTMLWriter extends HTMLWriter {
             throw ex;
         }
 
-        // Copy resources (COMMENT OUT WHILE DEBUGGING JS/CSS)
+        tracker.messageUpdate("Copying resources...");
+        // Copy resources (COMMENT OUT WHILE DEBUGGING THE JS/CSS)
         copyResources(RES_PATH, resPath);
 
+        tracker.messageUpdate("Writing index...");
         // Render template
-        try (Writer writer = new FileWriter(new File(dstDirectory, dst.getName()),
-                StandardCharsets.UTF_8)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(dstPath.resolve(dst.getFileName()))) {
             engine.process(INDEX_TEMPLATE_PATH, new Context(), writer);
         }
 
-        return dstDirectory;
+        // Tracking score update (final)
+        trackerScore.getAndIncrement();
+        tracker.progressChanged(trackerScore.get());
+
+        tracker.completed();
+
+        return dstPath;
     }
 }

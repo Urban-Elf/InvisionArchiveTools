@@ -21,6 +21,7 @@ package com.urbanelf.iat.content.model.topic;
 
 import org.json.JSONObject;
 
+// FIXME: Future notice: this class is not to be mistaken for a subclass of iat.content.model.Meta
 public class TopicMeta {
     private final String title;
     private final boolean pinned;

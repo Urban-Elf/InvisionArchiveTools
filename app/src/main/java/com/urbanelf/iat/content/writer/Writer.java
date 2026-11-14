@@ -20,23 +20,13 @@
 package com.urbanelf.iat.content.writer;
 
 import com.urbanelf.iat.content.model.Content;
+import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public abstract class Writer {
-    protected abstract File write(Content content, File dst) throws IOException;
-
-    protected static File resolveDestinationDirectory(File dst) {
-        File dstDirectory;
-        for (int i = 0; true; i++) {
-            dstDirectory = new File(dst.getParentFile(),
-                    StringUtils.removeExtension(dst.getName())
-                            + (i == 0 ? "" : " (" + i + ")"));
-            if (!dstDirectory.exists())
-                break;
-        }
-        return dstDirectory;
-    }
+    public abstract Path write(ContentSpec spec, Path dst, WriterTracker tracker) throws IOException;
 }

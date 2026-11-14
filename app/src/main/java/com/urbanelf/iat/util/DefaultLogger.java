@@ -33,15 +33,23 @@ public class DefaultLogger implements Logger {
     @Override
     public void error(String tag, String message, Throwable throwable) {
         System.err.println(getMessageString(Severity.ERROR, tag, message, throwable));
+        printStackTrace(throwable);
     }
 
     @Override
     public void fatal(String tag, String message, Throwable throwable) {
         System.err.println(getMessageString(Severity.FATAL, tag, message, throwable));
+        printStackTrace(throwable);
     }
 
     @Override
     public void debug(String tag, String message) {
         System.out.println(getMessageString(Severity.DEBUG, tag, message));
+    }
+
+    @Override
+    public void printStackTrace(Throwable throwable) {
+        if (throwable != null)
+            throwable.printStackTrace(System.err);
     }
 }

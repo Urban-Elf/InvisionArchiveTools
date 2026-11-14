@@ -21,8 +21,7 @@ package com.urbanelf.iat.ui;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.urbanelf.iat.Core;
-import com.urbanelf.iat.content.parser.ContentSpec;
-import com.urbanelf.iat.content.parser.ParserDispatcher;
+import com.urbanelf.iat.auth.CredentialManager;
 import com.urbanelf.iat.ic.IC;
 import com.urbanelf.iat.ic.IC4;
 import com.urbanelf.iat.ic.IC5;
@@ -36,7 +35,6 @@ import com.urbanelf.iat.util.ThemeManager;
 import com.urbanelf.iat.util.UIUtils;
 import com.urbanelf.iat.util.URLUtils;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.awt.BorderLayout;
@@ -55,18 +53,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Iterator;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -89,8 +82,6 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
-import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -119,6 +110,7 @@ public class MainFrame extends JFrame {
     private IC currentIc;
     private final ArrayList<JButton> workerButtons;
     private WorkerFrame currentWorker;
+    private final AtomicBoolean skipRecoveryOnWorkerStart = new AtomicBoolean(false);
 
     public MainFrame() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -244,109 +236,51 @@ public class MainFrame extends JFrame {
         // Set visible
         setVisible(true);
 
-        new Timer(300, e -> {
-            // Handle unexported archives
-            try {
-                final Stream<Path> walk = Files.walk(FileTree.getExportPath())
-                        .filter(p -> p.getFileName().toString().endsWith(".json"))
-                        .sorted(Comparator.reverseOrder()); // most recent first
-                final Iterator<Path> iterator = walk.iterator();
+        // Initial recovery check
+        processOrphanedArchives(result -> skipRecoveryOnWorkerStart.set(true));
+    }
 
-                Runnable processNext = new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!iterator.hasNext()) {
-                            walk.close();
-                            return;
-                        }
+    private void processOrphanedArchives(Consumer<Boolean> onCompleted) {
+        ArchiveRecoverer.processOrphanedArchives(this, FileTree.getExportPath(), (future, refreshSpec, path) -> {
+            launchWorkerFrame(refreshSpec.getIc(), refreshSpec.getWorkerType(), path.getFileName().toString(),
+                    () -> future.complete(null));  // continue loop
+        }, onCompleted);
+    }
 
-                        final Runnable runnableThis = this;
-                        final Path p = iterator.next();
-                        Core.warning(TAG, "Found unexported archive '" + p.getFileName().toString() + "'");
 
-                        Object[] options = {"Recover", "Discard"};
-                        int result = JOptionPane.showOptionDialog(
-                                MainFrame.this,
-                                "An unexported archive was detected, do you want to recover it?",
-                                "Recovery",
-                                JOptionPane.DEFAULT_OPTION,
-                                JOptionPane.INFORMATION_MESSAGE,
-                                null,
-                                options,
-                                options[0]);
-                        if (result == 0) {
-                            // Background recovery
-                            new SwingWorker<Void, Void>() {
-                                private boolean continueOnDone = false;
+    private JMenu createSessionMenu() {
+        final JMenu menu = new JMenu("Session");
 
-                                @Override
-                                protected Void doInBackground() {
-                                    ContentSpec spec = null;
-                                    try {
-                                        spec = ParserDispatcher.process(p.toFile());
-                                    } catch (IOException | JSONException e2) {
-                                        SwingUtilities.invokeLater(() -> {
-                                            JOptionPane.showMessageDialog(MainFrame.this,
-                                                    "Corrupt or invalid archive file: \n\n"
-                                                            + p.getFileName().toString(),
-                                                    "An error occurred",
-                                                    JOptionPane.WARNING_MESSAGE);
-                                        });
-                                        Core.error(TAG, "Error parsing archive '" + p.getFileName().toString() + "'", e2);
-                                        // Delete file
-                                        try {
-                                            Files.deleteIfExists(p);
-                                            Core.warning(TAG, "Deleted archive '" + p.getFileName().toString() + "'");
-                                        } catch (IOException e3) {
-                                            Core.error(TAG, "Failed to delete archive '" + p.getFileName().toString() + "'", e3);
-                                        }
-                                        continueOnDone = true;
-                                    }
-                                    if (spec != null) {
-                                        Core.exportArchive(MainFrame.this, spec);
-                                        SwingUtilities.invokeLater(runnableThis); // continue loop
-                                    }
-                                    return null;
-                                }
-
-                                @Override
-                                protected void done() {
-                                    if (continueOnDone)
-                                        SwingUtilities.invokeLater(runnableThis); // continue loop
-                                }
-                            }.execute();
-                            return;
-                        } else if (result == 1) {
-                            try {
-                                Files.deleteIfExists(p);
-                                Core.warning(TAG, "Deleted archive '" + p.getFileName().toString() + "'");
-                            } catch (IOException e2) {
-                                Core.error(TAG, "Failed to delete archive '" + p.getFileName().toString() + "'", e2);
-                            }
-                        }
-                        SwingUtilities.invokeLater(runnableThis); // continue loop
-                    }
-                };
-
-                processNext.run(); // Start the loop
-            } catch (IOException e2) {
-                Core.error(TAG, "An error occurred while attempting to traverse export path", e2);
+        menu.add(new JMenuItem("Load Credential") {
+            {
+                addActionListener(e -> CredentialManager.showLoadCredentialDialog(this));
             }
-            ((Timer) e.getSource()).stop();
-        }).start();
+        });
+        menu.addSeparator();
+        menu.add(new JMenuItem("Set Login Credential") {
+            {
+                addActionListener(e -> CredentialManager.showSaveCredentialDialog(this));
+            }
+        });
+        menu.add(new JMenuItem("Purge Credential") {
+            {
+                addActionListener(e -> CredentialManager.showDeleteCredentialDialog(this));
+            }
+        });
+        menu.addSeparator();
+        menu.add(new JMenuItem("Quit") {
+            {
+                addActionListener(e -> System.exit(0));
+            }
+        });
+        return menu;
     }
 
     private JMenuBar createMenuBar() {
         final JMenuBar menuBar = new JMenuBar();
 
         // Session
-        final JMenu sessionMenu = new JMenu("Session");
-        sessionMenu.add(new JMenuItem("Quit") {
-            {
-                addActionListener(e -> System.exit(0));
-            }
-        });
-        menuBar.add(sessionMenu);
+        menuBar.add(createSessionMenu());
 
         // Help
         final JMenu helpMenu = new JMenu("Help");
@@ -649,6 +583,8 @@ public class MainFrame extends JFrame {
     private void setCurrentWorker(WorkerFrame frame) {
         currentWorker = frame;
         workerButtons.forEach(button -> button.setEnabled(frame == null));
+        if (frame != null)
+            frame.toFront();
     }
 
     private JPanel createCenterPanel() {
@@ -839,23 +775,49 @@ public class MainFrame extends JFrame {
                     );
                     return;
                 }
-                setCurrentWorker(new WorkerFrame(currentIc, type) {
-                    {
-                        addWindowListener(new WindowAdapter() {
-                            @Override
-                            public void windowClosed(WindowEvent windowEvent) {
-                                setCurrentWorker(null);
-                            }
-                        });
-                        // Align frame
-                        setLocationRelativeTo(MainFrame.this);
-                        // Show it
-                        setVisible(true);
-                    }
-                });
+                // Check for orphans before starting a new worker (unless temporary skip)
+                if (!skipRecoveryOnWorkerStart.get()) {
+                    processOrphanedArchives(recoveredArchive -> {
+                        // Only start new session if no archive was exported or loaded, just to avoid annoyance.
+                        if (!recoveredArchive) {
+                            // Launch worker
+                            launchWorkerFrame(currentIc, type);
+                        }
+                    });
+                } else {
+                    Core.info(TAG, "Skipping recovery check on worker start (handled once at startup)");
+                    skipRecoveryOnWorkerStart.set(false);
+                    // Launch worker
+                    launchWorkerFrame(currentIc, type);
+                }
             }
         });
         return button;
+    }
+
+    private WorkerFrame launchWorkerFrame(IC ic, WorkerType workerType) {
+        return launchWorkerFrame(ic, workerType, null, null);
+    }
+
+    private WorkerFrame launchWorkerFrame(IC ic, WorkerType workerType, String inputDir, Runnable onClose) {
+        WorkerFrame frame = new WorkerFrame(ic, workerType, inputDir) {
+            {
+                addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosed(WindowEvent windowEvent) {
+                        setCurrentWorker(null);
+                        if (onClose != null)
+                            onClose.run();
+                    }
+                });
+                // Align frame
+                setLocationRelativeTo(MainFrame.this);
+                // Show it
+                setVisible(true);
+            }
+        };
+        setCurrentWorker(frame);
+        return frame;
     }
 
     private JPanel createEastPanel() {

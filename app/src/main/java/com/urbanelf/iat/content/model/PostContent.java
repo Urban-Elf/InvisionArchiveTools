@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+@Deprecated
 public class PostContent implements Content, FlatResource {
     public static final String HEADER_USER_DATA = "user_data";
 
@@ -43,7 +44,7 @@ public class PostContent implements Content, FlatResource {
         userDataObject.keys().forEachRemaining(
                 key -> userData.put(key,
                         new UserData(userDataObject.getJSONObject(key))));
-        // Pages are populated by the NDJSON Parser
+        // Pages are populated by the NDJSON SpecParser
         this.pages = new ArrayList<>();
     }
 
@@ -57,9 +58,10 @@ public class PostContent implements Content, FlatResource {
     public void flatten(Path resPath) {
         // Flatten UD
         userData.values().forEach(value -> value.flatten(resPath));
+
         // Flatten posts
-        pages.forEach(page ->
-                page.forEach(post -> post.flatten(resPath)));
+        //FIXME: pages.forEach(page ->
+        //        page.forEach(post -> post.flatten(resPath)));
     }
 
     @Override

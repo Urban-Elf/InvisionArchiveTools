@@ -8,7 +8,7 @@
 
 {"shared_action":"REFRESH_WORKER", "worker_id":"ae2b7ad4-66c1-4118-8aba-8445b272d997"}
 
-{"shared_action":"LOAD_FROM_SPEC", "data":{"ic": {"version":4,"root_url":"https://www.catholicharbor.com"},"worker_type":"MESSENGER_WORKER", "input_dir":"test_output"}}
+{"shared_action":"LOAD_FROM_SPEC", "data":{"input_dir":"test_output"}}
 
 
 

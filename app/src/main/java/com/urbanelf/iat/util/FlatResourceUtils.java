@@ -43,7 +43,7 @@ public final class FlatResourceUtils {
         try {
             client.send(request, HttpResponse.BodyHandlers.ofFile(resPath.resolve(resourceName)));
         } catch (IOException | InterruptedException e) {
-            Core.warning(TAG, "");
+            Core.error(TAG, "Error flattening resource '" + url + "' to " + resPath, e);
             return url;
         }
         return Paths.get("..", resPath.getFileName().toString(), resourceName).toString();

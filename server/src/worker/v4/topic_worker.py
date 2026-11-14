@@ -26,6 +26,7 @@ from ...content.topic import Topic, RecommendedPost
 from ...content.writers import JSONWriter
 from ... import proto_model
 from ... import util
+from ...shared_constants import WorkerType
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 import time
@@ -35,13 +36,13 @@ class TopicWorkerV4State:
     SELECT_TOPIC = ICWorkerState(note="Navigate to a topic to begin archiving.",
                                      hint="Locate a topic on the browser, and press 'Next'",
                                      button_configs=[ButtonConfig("Next")])
-    ANALYZING = ICWorkerState(note="Preparing...")
+    ANALYZING = ICWorkerState(note="Preparing...", progressive=True)
     INVALID_TOPIC = ICWorkerState("No topic open. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
 
 class TopicWorkerV4(IC4Worker):
     def __init__(self, worker_id, ic, output_dir):
-        super().__init__(worker_id, ic, output_dir)
+        super().__init__(worker_id, ic, WorkerType.TOPIC_WORKER, output_dir)
 
     def execute(self):
         # Select messenger

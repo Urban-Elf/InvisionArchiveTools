@@ -21,7 +21,11 @@ package com.urbanelf.iat.proto.constants;
 
 public enum ClientSA {
     DISPATCH_WORKER,
+    LOAD_FROM_SPEC,
+    REFRESH_WORKER,
     STATE_INPUT,
+    CREDENTIAL_LOADED,
     TERMINATE_WORKER,
-    TERMINATE
+    TERMINATE,
+    DUMMY
 }

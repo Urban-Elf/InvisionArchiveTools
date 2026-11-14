@@ -19,25 +19,11 @@
 
 package com.urbanelf.iat.proto.constants;
 
-import java.util.function.Consumer;
-
 public enum ButtonCallbackSA {
-    NONE(params -> {}),
-    OPEN_LOG(params -> {
-
-    }),
-    EXPORT_ARCHIVE(params -> {}),
-    TERMINATE(params -> {
-
-    });
-
-    private final Consumer<Object[]> consumer;
-
-    ButtonCallbackSA(Consumer<Object[]> consumer) {
-        this.consumer = consumer;
-    }
-
-    public Consumer<Object[]> getConsumer() {
-        return consumer;
-    }
+    NONE,
+    OPEN_LOG,
+    EXPORT_ARCHIVE,
+    REFRESH,
+    SAVE_AND_QUIT,
+    TERMINATE;
 }

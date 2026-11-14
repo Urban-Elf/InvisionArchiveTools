@@ -26,6 +26,8 @@ class ClientSA(Enum):
     REFRESH_WORKER = auto()
     # worker_id, data[client_object]
     STATE_INPUT = auto()
+    # data[credential]
+    CREDENTIAL_LOADED = auto()
     # worker_id
     TERMINATE_WORKER = auto()
     # <none>
@@ -64,5 +66,6 @@ class ButtonCallbackSA(Enum):
     NONE = auto()
     OPEN_LOG = auto()
     EXPORT_ARCHIVE = auto()
-    RESTART = auto()
+    REFRESH = auto()
+    SAVE_AND_QUIT = auto()
     TERMINATE = auto()

@@ -19,10 +19,11 @@
 
 package com.urbanelf.iat.content.parser;
 
-import com.urbanelf.iat.content.model.Content;
-import com.urbanelf.iat.proto.constants.ContentType;
+import com.urbanelf.iat.content.model.Meta;
+import com.urbanelf.iat.content.model.PostCount;
+import com.urbanelf.iat.content.model.RefreshSpec;
 
-import java.io.File;
+import java.nio.file.Path;
 
-public record ContentSpec(ContentType type, File file, Content content) {
+public record ContentSpec(Meta meta, Path path, PostCount postCount, RefreshSpec refreshSpec) {
 }

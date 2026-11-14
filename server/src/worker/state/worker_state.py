@@ -32,43 +32,48 @@ class ButtonConfig(serializable.JSONSerializable):
         }
 
 class ICWorkerState(serializable.JSONSerializable):
-    def __init__(self, note: str, hint: str="", button_configs: list[ButtonConfig]=None, indeterminate=True):
+    def __init__(self, note: str, hint: str="", button_configs: list[ButtonConfig]=None, indeterminate=True, progressive=False):
         self.note = note
         self.hint = hint
 
         self.button_configs = button_configs
         self.indeterminate = indeterminate
+        self.progressive = progressive
 
     def is_progressive(self):
-        return self.button_configs == None
+        return self.progressive
     
     def __serialize__(self):
         return {
             "note": self.note,
             "hint": self.hint,
             "button_configs": self.button_configs,
-            "indeterminate": self.indeterminate
+            "indeterminate": self.indeterminate,
+            "progressive": self.progressive
         }
 
 class SharedState:
-    INITIALIZATION = ICWorkerState(note="Initializing... Please wait...")
+    INITIALIZATION = ICWorkerState(note="Initializing... Please wait...", progressive=True)
     AUTH_REQUIRED = ICWorkerState(note="Please sign in to continue.",
                                   hint="Sign in on the browser before pressing 'Next'",
                                   button_configs=[ButtonConfig("Next")])
-    VALIDATING_AUTH = ICWorkerState(note="Validating session...")
+    VALIDATING_AUTH = ICWorkerState(note="Validating session...", progressive=True)
     AUTH_INVALID = ICWorkerState(note="Session invalid or interrupted. Try again.",
                                       button_configs=[ButtonConfig("Retry")])
     ARCHIVING = ICWorkerState(note="Archiving...",
                               hint="Please do not interfere with the browser.",
-                              indeterminate=False)
+                              button_configs=[ButtonConfig("Save & Quit", shared_action=shared_constants.ButtonCallbackSA.SAVE_AND_QUIT),
+                                              ButtonConfig("Refresh", shared_action=shared_constants.ButtonCallbackSA.REFRESH)],
+                              indeterminate=False,
+                              progressive=True)
     SESSION_INTERRUPTED = ICWorkerState(note="Session interrupted. Please restart the task.",
-                                     button_configs=[ButtonConfig("Quit", shared_action=shared_constants.ButtonCallbackSA.TERMINATE), ButtonConfig("Restart", shared_action=shared_constants.ButtonCallbackSA.RESTART)])
+                                     button_configs=[ButtonConfig("Quit", shared_action=shared_constants.ButtonCallbackSA.TERMINATE),
+                                                     ButtonConfig("Restart", shared_action=shared_constants.ButtonCallbackSA.REFRESH)])
     INTERNAL_EXCEPTION = ICWorkerState(note="An internal error occurred. Open log?",
                                        hint="Please notify the developer (Help -> Report Bug)",
                                        button_configs=[
                                            ButtonConfig("OK", shared_action=shared_constants.ButtonCallbackSA.OPEN_LOG),
                                            ButtonConfig("Close", shared_action=shared_constants.ButtonCallbackSA.TERMINATE)])
-    ATTEMPTING_RECONNECT = ICWorkerState(note="Connecting...")
     RESULT_AVAILABLE = ICWorkerState(note="Operation completed successfully.",
                                      hint="Press the button to save the archive.",
                                      button_configs=[ButtonConfig("Export...", shared_action=shared_constants.ButtonCallbackSA.EXPORT_ARCHIVE)])

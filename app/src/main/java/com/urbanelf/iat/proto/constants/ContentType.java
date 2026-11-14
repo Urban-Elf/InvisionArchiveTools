@@ -20,33 +20,53 @@
 package com.urbanelf.iat.proto.constants;
 
 import com.urbanelf.iat.content.ArchiveFormat;
-import com.urbanelf.iat.content.parser.PostParser;
-import com.urbanelf.iat.content.parser.Parser;
+import com.urbanelf.iat.content.parser.MessengerPageParser;
+import com.urbanelf.iat.content.parser.MessengerSpecParser;
+import com.urbanelf.iat.content.parser.PageParser;
+import com.urbanelf.iat.content.parser.SpecParser;
 import com.urbanelf.iat.content.parser.TopicPostParser;
 import com.urbanelf.iat.content.writer.Writer;
+import com.urbanelf.iat.content.writer.WriterFactory;
 import com.urbanelf.iat.content.writer.html.MessengerHTMLWriter;
 
-import java.util.HashMap;
+public enum ContentType implements WriterFactory {
+    MESSENGER("Messenger", new MessengerSpecParser(), new MessengerPageParser()) {
+        @Override
+        public Writer createWriter(ArchiveFormat format) {
+            if (format == ArchiveFormat.HTML) {
+                return new MessengerHTMLWriter();
+            }
+            return null;
+        }
+    },
+    TOPIC("Topic", new TopicPostParser(), null),
+    FORUM("Forum", null, null),
+    BLOG_ENTRY("Blog Entry", null, null);
 
-public enum ContentType {
-    MESSENGER(new PostParser()) {{ getWriterMap().put(ArchiveFormat.HTML, new MessengerHTMLWriter()); }},
-    TOPIC(new TopicPostParser()) {{  }},
-    FORUM(null),
-    BLOG_ENTRY(null);
+    private final String title;
+    private final SpecParser specParser;
+    private final PageParser pageParser;
 
-    private final Parser parser;
-    private final HashMap<ArchiveFormat, Writer> writerMap;
-
-    ContentType(Parser parser) {
-        this.parser = parser;
-        this.writerMap = new HashMap<>();
+    ContentType(String name, SpecParser specParser, PageParser pageParser) {
+        this.title = name;
+        this.specParser = specParser;
+        this.pageParser = pageParser;
     }
 
-    public Parser getParser() {
-        return parser;
+    public String getTitle() {
+        return title;
     }
 
-    public HashMap<ArchiveFormat, Writer> getWriterMap() {
-        return writerMap;
+    public SpecParser getSpecParser() {
+        return specParser;
+    }
+
+    public PageParser getPageParser() {
+        return pageParser;
+    }
+
+    @Override
+    public Writer createWriter(ArchiveFormat format) {
+        throw new UnsupportedOperationException();
     }
 }

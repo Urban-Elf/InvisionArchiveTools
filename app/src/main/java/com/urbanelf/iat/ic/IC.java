@@ -28,6 +28,15 @@ public abstract class IC implements JSONSerializable {
         return urlString + (urlString.endsWith("/") ? "" : "/") + (data.startsWith("?") ? "" : "?") + data;
     }
 
+    public static IC instantiateByVersion(int version, String rootUrl) throws ICUnsupportedException {
+        if (version == 4)
+            return new IC4(rootUrl);
+        else if (version == 5) {
+            return new IC5(rootUrl);
+        }
+        throw new ICUnsupportedException("IC version " + version + " has no class candidate");
+    }
+
     public IC(String rootUrl) {
         this.rootUrl = rootUrl;
     }

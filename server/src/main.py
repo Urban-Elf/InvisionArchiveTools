@@ -45,15 +45,10 @@ from .worker import ic_worker
 from .worker.v4 import messenger_worker
 from .worker.v4 import topic_worker
 from . import proto_model
-from .worker.ic import *
+from .worker.ic import IC, get_ic_by_version, validate_version
 
-DEBUG = True
-SINGLE_WORKER = True
-
-IC_VERSION_MAP = {
-    4: IC4,
-    5: IC5
-}
+DEBUG = False
+SINGLE_WORKER = False
 
 WORKER_VERSION_MAP = {
     shared_constants.WorkerType.MESSENGER_WORKER: {
@@ -86,7 +81,11 @@ def get_worker_spec_by_class(worker_class):
 ACTIVE_WORKERS = dict()
 ACTIVE_WORKERS_LOCK = threading.Lock()
 
+CREDENTIAL_KEY = None
+
 def process_client_packet(packet: proto_model.ClientPacket) -> bool:
+    global CREDENTIAL_KEY
+
     """
     Returns true if server should terminate
     """
@@ -113,18 +112,17 @@ def process_client_packet(packet: proto_model.ClientPacket) -> bool:
         if r_spec is None:
             util.log(util.LogLevel.WARNING, "Worker UUID " + packet.worker_id + " has no stored refresh spec. Cannot refresh.")
             return False
-        
         # Create a packet with existing data (kind of hacky, but works)
-        _spec = get_worker_spec_by_class(_worker.__class__)
+        #_spec = get_worker_spec_by_class(_worker.__class__)
         # FIXME: version should be obtained from IC_VERSION_MAP not _spec.
-        _dummy_packet = proto_model.ClientPacket("""{"shared_action":"%s", "data":{"ic":{"root_url":"%s","version":%s},"worker_type":"%s"}}"""
-                                          % (shared_constants.ClientSA.DUMMY.name, _worker.ic.root_url, _spec["version"], _spec["type"].name))
+        #_dummy_packet = proto_model.ClientPacket("""{"shared_action":"%s", "data":{"ic":{"root_url":"%s","version":%s},"worker_type":"%s"}}"""
+        #                                  % (shared_constants.ClientSA.DUMMY.name, _worker.ic.root_url, _spec["version"], _spec["type"].name))
         # clone before worker shutdown
         input_dir = Path(_worker.output_dir)
         # Shutdown worker (thread joined to main), do NOT remove from ACTIVE_WORKERS (callback=False)
-        terminate_worker(packet.worker_id, callback=False)
+        terminate_worker(packet.worker_id, callback=False, refreshing=True)
         # Dispatch from spec with existing UUID (load from spec)
-        dispatch_worker(_dummy_packet, spec_input_dir=input_dir, existing_uuid=packet.worker_id)
+        dispatch_worker(packet=None, spec_input_dir=input_dir, existing_uuid=packet.worker_id)
 
     elif packet.shared_action == proto_model.ClientSA.STATE_INPUT:
         _worker = get_worker_by_uuid(packet.worker_id)
@@ -133,10 +131,14 @@ def process_client_packet(packet: proto_model.ClientPacket) -> bool:
         # Update client object
         _worker.set_client_object(packet.data["client_object"])
         pass
+    elif packet.shared_action == proto_model.ClientSA.CREDENTIAL_LOADED:
+        CREDENTIAL_KEY = packet.data["key"]
+        util.log(util.LogLevel.INFO, "Updated credential.")
     elif packet.shared_action == proto_model.ClientSA.TERMINATE_WORKER:
         terminate_worker(packet.worker_id)
     elif packet.shared_action == proto_model.ClientSA.TERMINATE:
         return True
+    return False
 
 def dispatch_worker(packet: proto_model.ClientPacket, spec_input_dir=None, existing_uuid=None):
     """
@@ -145,21 +147,32 @@ def dispatch_worker(packet: proto_model.ClientPacket, spec_input_dir=None, exist
     The existing_uuid is used if you are refreshing a worker (restarting ChromeDriver) and want to keep the same UUID.
     """
 
-    ic = packet.data["ic"]
-    # IC version
-    version = ic["version"]
-    assert type(version) is int, "'version' must be of type int"
-    version = int(version)
-    assert version == 4 or version == 5, "'version' must be of value 4 or 5"
+    _ic = None
+    _version = None
+    _worker_type = None
 
-    # worker type
-    worker_type = shared_constants.WorkerType[packet.data["worker_type"]]
+    r_spec = None
+    if (spec_input_dir is not None):
+        r_spec = ic_worker.ICWorker.load_refresh_spec(spec_input_dir)
+        assert r_spec is not None, "Failed to load refresh spec from " + str(spec_input_dir)
+        _ic = r_spec.ic
+        _worker_type = r_spec.worker_type
+        _version = r_spec.ic.get_version_number()
+    else:
+        ic = packet.data["ic"]
+
+        version = ic["version"]
+        validate_version(version)
+        _version = int(version)
+
+        # Initialize IC
+        _ic = get_ic_by_version(ic["version"])(ic["root_url"])
+        # worker type
+        _worker_type = shared_constants.WorkerType[packet.data["worker_type"]]
 
     ## DEBUG ##
-    util.log(util.LogLevel.INFO, "Root URL: " + str(ic["root_url"]))
+    util.log(util.LogLevel.INFO, "Root URL: " + str(_ic.root_url))
 
-    # Initialize IC and Worker
-    _ic = IC_VERSION_MAP[version](str(ic["root_url"]))
     _uuid = None
     _worker = None
     
@@ -182,14 +195,16 @@ def dispatch_worker(packet: proto_model.ClientPacket, spec_input_dir=None, exist
         ## Load from spec
         
         # Determine class
-        worker_class: ic_worker.ICWorker = WORKER_VERSION_MAP[worker_type][version]
+        worker_class: ic_worker.ICWorker = WORKER_VERSION_MAP[_worker_type][_version]
         
-        _worker = worker_class.load_from_input_dir(_uuid, _ic, spec_input_dir)
+        # If REFRESH packet invoked this method, this argument was included
+        refreshing = existing_uuid is not None
+        _worker = worker_class.load_from_spec(_uuid, _ic, r_spec, spec_input_dir, refreshing=refreshing, credential_key=CREDENTIAL_KEY)
     else:
         assert not Path(packet.data["output_dir"]).is_absolute(), "output_dir cannot be absolute"
         output_dir: Path = file_tree.EXPORT_PATH / packet.data["output_dir"]
         output_dir.mkdir(parents=True, exist_ok=True)
-        _worker: ic_worker.ICWorker = WORKER_VERSION_MAP[worker_type][version](_uuid, _ic, output_dir)
+        _worker: ic_worker.ICWorker = WORKER_VERSION_MAP[_worker_type][_version](_uuid, _ic, output_dir, credential_key=CREDENTIAL_KEY)
 
     if spec_input_dir is not None and existing_uuid is not None:
         # Refreshing worker, do NOT remove from ACTIVE_WORKERS on shutdown
@@ -215,12 +230,12 @@ def dispatch_worker(packet: proto_model.ClientPacket, spec_input_dir=None, exist
     _worker.start()
 
 
-def terminate_worker(uuid, callback: bool=True):
+def terminate_worker(uuid, callback: bool=True, refreshing: bool=False):
     _worker = get_worker_by_uuid(uuid)
-    if (_worker == None):
+    if _worker is None:
         return False
     try:
-        _worker.shutdown(callback=callback)
+        _worker.shutdown(callback=callback, refreshing=refreshing)
         _worker.join()
     except:
         util.log(util.LogLevel.WARNING, "Error shutting down worker: ", error_trace=True)
@@ -235,7 +250,7 @@ def get_worker_by_uuid(uuid: str) -> ic_worker.ICWorker:
     return None
 
 def main(args: list[str]):
-    global DEBUG, SINGLE_WORKER
+    global DEBUG, SINGLE_WORKER, CREDENTIAL_KEY
 
     # Parse command-line arguments
     if "--debug" in args:
@@ -270,9 +285,12 @@ def main(args: list[str]):
         except:
             util.log(util.LogLevel.WARNING, "Failed to deconstruct client packet: ", error_trace=True)
 
+    CREDENTIAL_KEY = None
+
     util.log(util.LogLevel.INFO, "Shutting down workers...")
     for worker_id in ACTIVE_WORKERS:
         worker: ic_worker.ICWorker = get_worker_by_uuid(worker_id)
         util.log(util.LogLevel.INFO, "KILLSIG >> " + worker_id)
         worker.shutdown(callback=False)
         worker.join()
+

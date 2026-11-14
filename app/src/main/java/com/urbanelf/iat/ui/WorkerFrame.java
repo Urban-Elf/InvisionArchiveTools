@@ -20,6 +20,7 @@
 package com.urbanelf.iat.ui;
 
 import com.urbanelf.iat.Core;
+import com.urbanelf.iat.content.model.RefreshSpec;
 import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.content.parser.ParserDispatcher;
 import com.urbanelf.iat.ic.IC;
@@ -29,6 +30,7 @@ import com.urbanelf.iat.proto.PythonServer;
 import com.urbanelf.iat.proto.ServerPacket;
 import com.urbanelf.iat.proto.constants.ClientSA;
 import com.urbanelf.iat.proto.constants.WorkerType;
+import com.urbanelf.iat.util.HashUtils;
 import com.urbanelf.iat.util.LocalStorage;
 
 import org.json.JSONObject;
@@ -44,11 +46,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -85,6 +86,10 @@ public class WorkerFrame extends JFrame {
     private final JProgressBar stateProgress;
 
     public WorkerFrame(IC ic, WorkerType workerType) {
+        this(ic, workerType, null);
+    }
+
+    public WorkerFrame(IC ic, WorkerType workerType, String inputDirName) {
         this.ic = ic;
         this.workerType = workerType;
 
@@ -224,7 +229,7 @@ public class WorkerFrame extends JFrame {
                             });
                         }
                         case STATE_CHANGED -> {
-                            final ICWorkerState state = new ICWorkerState((JSONObject) packet.getData().get("state"));
+                            ICWorkerState state = new ICWorkerState((JSONObject) packet.getData().get("state"));
                             SwingUtilities.invokeLater(() -> setState(state));
                         }
                         case PROGRESS_UPDATE -> {
@@ -233,8 +238,9 @@ public class WorkerFrame extends JFrame {
                         }
                         case RESULT_AVAILABLE -> {
                             final String path = (String) packet.getData().get("path");
-                            // Dispatch parser and store ContentSpec
-                            contentSpec = ParserDispatcher.process(new File(path));
+                            // Dispatch parser
+                            Path archivePath = Path.of(path);
+                            contentSpec = ParserDispatcher.process(archivePath, false);
                         }
                     }
                 } catch (Exception e) {
@@ -270,7 +276,7 @@ public class WorkerFrame extends JFrame {
         stateHint.setFont(Fonts.SMALL);
         stateProgress = new JProgressBar();
 
-        statePanelWrapper = new JPanel();
+        statePanelWrapper = new JPanel(new GridBagLayout());
         progressiveStatePanel = layoutProgressiveStatePanel();
         selectiveStatePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
 
@@ -279,7 +285,7 @@ public class WorkerFrame extends JFrame {
             {
                 this.gridx = 0;
                 this.gridy = 0;
-                this.insets = new Insets(0, 0, 8, 0);
+                this.insets = new Insets(0, 0, 14, 0);
                 this.weightx = 1;
                 this.fill = GridBagConstraints.HORIZONTAL;
             }
@@ -306,10 +312,19 @@ public class WorkerFrame extends JFrame {
         // Set initial state
         setState(ICWorkerState.CONNECTING);
 
-        // Start worker
-        PythonServer.writePacket(new ClientPacket(ClientSA.DISPATCH_WORKER)
-                .addData("ic", ic.toJson())
-                .addData("worker_type", workerType));
+        final String outputDirName = HashUtils.hashMD5(Long.toString(System.currentTimeMillis()));
+
+        if (inputDirName != null) {
+            // Start worker (recovery)
+            PythonServer.writePacket(new ClientPacket(ClientSA.LOAD_FROM_SPEC)
+                    .addData("input_dir", inputDirName));
+        } else {
+            // Start worker
+            PythonServer.writePacket(new ClientPacket(ClientSA.DISPATCH_WORKER)
+                    .addData("ic", ic.toJson())
+                    .addData("worker_type", workerType)
+                    .addData("output_dir", outputDirName));
+        }
     }
 
     public void updateComponentTreeUI() {
@@ -322,13 +337,31 @@ public class WorkerFrame extends JFrame {
         stateNote.setText(state.getNote());
         stateHint.setText(state.getHint());
         statePanelWrapper.removeAll();
+        boolean hasSelection = state.getButtonConfigs() != null;
         if (state.isProgressive()) {
             stateProgress.setIndeterminate(state.isIndeterminate());
-            statePanelWrapper.add(progressiveStatePanel);
-        } else {
+            statePanelWrapper.add(progressiveStatePanel, new GridBagConstraints() {
+                {
+                    this.gridx = 0;
+                    this.gridy = 0;
+                    if (hasSelection)
+                        this.insets = new Insets(0, 0, 12, 0);
+                    this.weightx = 1;
+                }
+            });
+        } //else {
+        if (hasSelection) {
             layoutSelectiveStatePanel(state);
-            statePanelWrapper.add(selectiveStatePanel);
+            statePanelWrapper.add(selectiveStatePanel, new GridBagConstraints() {
+                {
+                    this.gridx = 0;
+                    this.gridy = 1;
+                    this.weightx = 1;
+                    this.fill = GridBagConstraints.HORIZONTAL;
+                }
+            });
         }
+        //}
     }
 
     private JPanel layoutProgressiveStatePanel() {
@@ -364,6 +397,28 @@ public class WorkerFrame extends JFrame {
                         }
                         case EXPORT_ARCHIVE -> {
                             Core.exportArchive(WorkerFrame.this, contentSpec, true);
+                        }
+                        case REFRESH -> {
+                            PythonServer.writePacket(new ClientPacket(workerId, ClientSA.REFRESH_WORKER));
+                            setState(ICWorkerState.REFRESHING);
+                        }
+                        case SAVE_AND_QUIT -> {
+                            String[] options = {"Yes", "No"};
+                            int result = JOptionPane.showOptionDialog(WorkerFrame.this,
+                                    """
+                                            Are you sure you want to exit now? You will be able to resume the operation later.
+                                            
+                                            (Hint: Resume operations by restarting the app.)""", // or by starting a new archiving session
+                                    "Save & Quit",
+                                    JOptionPane.DEFAULT_OPTION,
+                                    JOptionPane.QUESTION_MESSAGE,
+                                    null,
+                                    options,
+                                    options[0]);
+                            if (result == 1) {
+                                // Destroy frame
+                                dispatchEvent(new WindowEvent(WorkerFrame.this, WindowEvent.WINDOW_CLOSING));
+                            }
                         }
                         case TERMINATE -> {
                             // Destroy frame

@@ -14,18 +14,18 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
-
+from ..ic import IC
 from ...worker.ic_worker import IC4Worker, RefreshSpec
 from ...worker.state.worker_state import *
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
-from ...content.content import Post, UserData, PageContent
+from ...content.content import Post, PostCount, UserData, PageContent
 from ...content.messenger import MessengerMeta
 from ...content.writers import JSONWriter
 from ... import proto_model
 from ... import util
-from ...shared_constants import ButtonCallbackSA
+from ...shared_constants import ButtonCallbackSA, WorkerType
 import re
 from pathlib import Path
 
@@ -33,11 +33,12 @@ class MessengerWorkerV4State:
     SELECT_MESSENGER = ICWorkerState(note="Select a messenger to archive.",
                                      hint="Click on a messenger in the browser and press 'Next'",
                                      button_configs=[ButtonConfig("Next")])
-    ANALYZING = ICWorkerState(note="Preparing...")
+    ANALYZING = ICWorkerState(note="Preparing...", progressive=True)
     INVALID_MESSENGER = ICWorkerState("No messenger selected. Please try again.",
                                       button_configs=[ButtonConfig("OK")])
-    SPEC_CORRUPT = ICWorkerState("Spec is corrupt! Contact developer.",
-                                      button_configs=[ButtonConfig("Close", shared_action=ButtonCallbackSA.TERMINATE)])
+    SPEC_CORRUPT = ICWorkerState(note="Spec is corrupt! Contact developer.",
+                                 hint="Contact developer (Help -> Report Bug)",
+                                 button_configs=[ButtonConfig("Close", shared_action=ButtonCallbackSA.TERMINATE)])
 
 
 def locate_input_page(directory: Path) -> int:
@@ -58,15 +59,19 @@ def locate_input_page(directory: Path) -> int:
 
 
 class MessengerWorkerV4(IC4Worker):
-    def __init__(self, worker_id, ic, output_dir):
-        super().__init__(worker_id, ic, output_dir)
+    def __init__(self, worker_id, ic, output_dir, credential_key=None):
+        super().__init__(worker_id, ic, WorkerType.MESSENGER_WORKER, output_dir, credential_key)
+        self.post_count = PostCount(0)
         self.page = 1
         self.metadata: MessengerMeta = None
         self.userdata_from_posts: bool = False
 
-    # TODO: Might want to make an execute_start and an execute_refresh to have cleaner code and one r_spec check in execute
+    def _load_from_spec(worker_id: str, ic: IC, input_dir: Path) -> IC4Worker:
+        worker = MessengerWorkerV4(worker_id, ic, input_dir)
+        return worker
+
     def execute(self):
-        loaded_from_spec = self._r_spec != None
+        loaded_from_spec = self._r_spec is not None
 
         util.log(util.LogLevel.INFO, "Starting MessengerWorkerV4 with output_dir: " + str(self.output_dir) + ", loaded_from_spec: " + str(loaded_from_spec))
 
@@ -80,7 +85,7 @@ class MessengerWorkerV4(IC4Worker):
                 except TimeoutException:
                     pass
             else:
-                util.log(util.LogLevel.WARNING, "Refresh spec URL is not a messenger: " + self._r_spec.refresh_url + " Cannot proceed.")
+                util.log(util.LogLevel.ERROR, "Refresh spec URL is not a messenger: " + self._r_spec.refresh_url + " Cannot proceed.")
                 self.set_state(MessengerWorkerV4State.SPEC_CORRUPT)
                 return
         else:
@@ -106,6 +111,9 @@ class MessengerWorkerV4(IC4Worker):
                 except TimeoutException:
                     self.set_state(MessengerWorkerV4State.INVALID_MESSENGER)
 
+            if self.should_shutdown():
+                return # May have arrived here by the loop above breaking (when shutdown flag is set)
+
             # Clean url
             clean_url = re.sub(r"\?page=\d+.*$", "", self.driver.current_url)
             #util.log(util.LogLevel.INFO, clean_url)
@@ -127,17 +135,21 @@ class MessengerWorkerV4(IC4Worker):
         #    util.log(util.LogLevel.INFO, f"{key}: {messenger.avatar_map[key]}")
         ######################################
 
+        # Delete refresh spec (indicates to client that this archive is fully prepared)
+        self.delete_refresh_spec()
+
         # Do not proceed with export if early shutdown occurs
-        if self.shutdown_event.is_set():
+        if self.should_shutdown():
             return
 
         # Export to temporary JSON file (DEPRECATED)
         #path = JSONWriter.write(messenger)
 
+
         # Notify client
         proto_model.write_packet(proto_model.ServerPacket(self.worker_id, proto_model.ServerSA.RESULT_AVAILABLE)
                                  .add_data("path", str(self.output_dir)))
-        
+
         self.set_state(SharedState.RESULT_AVAILABLE)
 
         # Don't shutdown, as client will send shutdown command
@@ -160,11 +172,17 @@ class MessengerWorkerV4(IC4Worker):
             if match:
                 final_page = int(match.group(1))
         except NoSuchElementException as e:
-            util.log(util.LogLevel.WARNING, "No pagination found, defaulting to single-paged messenger.")
+            # cannot be single-paged if saved archive already indicates multiple pages
+            if loaded_from_spec and self.page > 1:
+                util.log(util.LogLevel.ERROR, "Refereshed archive indicates multiple pages exist, but no was pagination found. Cannot proceed (danger of corrupting archive).")
+                self.set_state(MessengerWorkerV4State.SPEC_CORRUPT)
+                return
+            else:
+                util.log(util.LogLevel.WARNING, "No pagination found, defaulting to single-paged messenger.")
 
         # Early exit condition for refreshing finished workers
         if loaded_from_spec and self.page == final_page:
-            util.log(util.LogLevel.INFO, "Refresh spec indicates messenger is already fully archived. Reporting completion.")
+            util.log(util.LogLevel.WARNING, "Refresh spec indicates messenger is already fully archived. Reporting completion.")
             return
 
         ### PREPARE METADATA ###
@@ -208,6 +226,10 @@ class MessengerWorkerV4(IC4Worker):
 
             self.write_metadata(self.metadata)
 
+        # load post count if refreshing
+        if loaded_from_spec:
+            self.post_count = self.load_post_count()
+
         # Refresh spec can now be written
         if not loaded_from_spec:
             self.stored_r_spec = self.create_refresh_spec()
@@ -217,11 +239,16 @@ class MessengerWorkerV4(IC4Worker):
         ### Archive ###
         self.set_state(SharedState.ARCHIVING)
 
+        # Initial update of progress when refreshing
+        if loaded_from_spec:
+            # Update progress
+            self.update_progress(float(self.page/final_page))
+
         # Set flag
         if loaded_from_spec and self._r_spec.userdata_from_posts:
             self.userdata_from_posts = True
 
-        while not self.shutdown_event.is_set():
+        while not self.should_shutdown():
             next_page_url = page_url + str(self.page) + "/"
 
             if self.page > 1:
@@ -249,13 +276,13 @@ class MessengerWorkerV4(IC4Worker):
                 datetime = article.find_element(By.CSS_SELECTOR, "time")
                 util.log(util.LogLevel.DEBUG, "Found datetime element: " + str(datetime))
                 content = article.find_element(By.CSS_SELECTOR, "div[data-role=\"commentContent\"]")
-                util.log(util.LogLevel.DEBUG, "Found content element: " + str(content))
+                util.log(util.LogLevel.DEBUG, "Found content element: [redacted]") # + str(content))
 
                 author_str: str = util.strip_tags(author.get_attribute("innerHTML"))
                 author_str = author_str.strip()
                 datetime_str = datetime.get_attribute("datetime").strip()
                 content_str = content.get_attribute("innerHTML").strip()
-                util.log(util.LogLevel.DEBUG, "Converted element contents: author='" + author_str + "', datetime='" + datetime_str + "', content='" + content_str + "'")
+                util.log(util.LogLevel.DEBUG, "Converted element contents: author='" + author_str + "', datetime='" + datetime_str + "', content=[redacted]")
 
                 comment_id = article.get_attribute("id").replace("elComment_", "")
                 link = page_url + str(self.page) + "#findComment-" + comment_id
@@ -284,6 +311,8 @@ class MessengerWorkerV4(IC4Worker):
             path = self.output_dir / f"page_{self.page}.json"
             if not path.exists():
                 JSONWriter.write_ndjson(page_obj, path)
+                self.post_count.count += len(page_obj.posts)
+                self.write_post_count(self.post_count)
             else:
                 util.log(util.LogLevel.WARNING, "Page file already exists, skipping write: " + str(path))
 
@@ -298,10 +327,13 @@ class MessengerWorkerV4(IC4Worker):
             if self.page > final_page:
                 break
 
+        # Note: if adding code in this section, make sure to add a self.should_shutdown() gate before it (because a loop is above this).
+
+    # FIXME: move these methods to ICWorker as NotImplemented in future for polymorphism
     def create_refresh_spec(self):
         if self.ic.is_messenger(self.driver.current_url):
             messenger_url = util.safe_url_base(self.driver.current_url)
-            r_spec = RefreshSpec(messenger_url, self.userdata_from_posts)
+            r_spec = RefreshSpec(self.ic, self.worker_type, messenger_url, self.userdata_from_posts)
             util.log(util.LogLevel.INFO, "Created refresh spec for messenger: " + messenger_url)
             return r_spec
         util.log(util.LogLevel.WARNING, "Failed to create refresh spec: current URL is not a messenger: " + self.driver.current_url)
@@ -315,6 +347,11 @@ class MessengerWorkerV4(IC4Worker):
             return
         JSONWriter.write_json(r_spec, path)
         util.log(util.LogLevel.INFO, "Wrote refresh spec to " + str(path))
+
+    def delete_refresh_spec(self):
+        path = self.output_dir / "refresh_spec.json"
+        path.unlink(missing_ok=True)
+        util.log(util.LogLevel.INFO, "Deleted refresh spec")
 
     def load_metadata(self) -> MessengerMeta:
         # Load metadata from file
@@ -331,3 +368,13 @@ class MessengerWorkerV4(IC4Worker):
         path = self.output_dir / "metadata.json"
         JSONWriter.write_json(meta, path)
         util.log(util.LogLevel.INFO, "Wrote metadata to " + str(path))
+
+    def load_post_count(self) -> PostCount:
+        path = self.output_dir / "post_count.json"
+        util.log(util.LogLevel.INFO, "Loaded post count from " + str(path))
+        return PostCount.deserialize(path)
+
+    def write_post_count(self, post_count: PostCount):
+        path = self.output_dir / "post_count.json"
+        JSONWriter.write_json(post_count, path)
+        util.log(util.LogLevel.DEBUG, "Wrote post count [DEBUG]")

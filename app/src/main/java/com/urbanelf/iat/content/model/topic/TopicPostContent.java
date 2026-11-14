@@ -51,7 +51,6 @@ public class TopicPostContent extends PostContent {
         topPostersObject.keys().forEachRemaining(key -> topPosters.put(key, topPostersObject.getInt(key)));
     }
 
-
     public String getAuthor() {
         return author;
     }

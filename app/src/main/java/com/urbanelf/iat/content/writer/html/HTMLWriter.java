@@ -22,7 +22,9 @@ package com.urbanelf.iat.content.writer.html;
 import com.urbanelf.iat.Core;
 import com.urbanelf.iat.content.model.Content;
 import com.urbanelf.iat.content.model.UserData;
+import com.urbanelf.iat.content.parser.ContentSpec;
 import com.urbanelf.iat.content.writer.Writer;
+import com.urbanelf.iat.content.writer.WriterTracker;
 import com.urbanelf.iat.util.ResourceUtils;
 import com.urbanelf.iat.util.URLUtils;
 
@@ -45,6 +47,7 @@ public abstract class HTMLWriter extends Writer {
     protected static final String TAG = HTMLWriter.class.getSimpleName();
 
     protected static final String PATH_PREFIX = "templates/html/";
+    public static final int POSTS_PER_PAGE = 25; // Default on IC 4
 
     private static final TemplateEngine TEMPLATE_ENGINE;
 
@@ -59,13 +62,11 @@ public abstract class HTMLWriter extends Writer {
     }
 
     @Override
-    protected File write(Content content, File dst) throws IOException {
-        return writeHTML(TEMPLATE_ENGINE, content, dst);
+    public Path write(ContentSpec spec, Path dst, WriterTracker tracker) throws IOException {
+        return writeHTML(TEMPLATE_ENGINE, spec, dst, tracker);
     }
 
-    public abstract File writeHTML(TemplateEngine engine, Content content, File dst) throws IOException;
-
-
+    public abstract Path writeHTML(TemplateEngine engine, ContentSpec spec, Path dst, WriterTracker tracker) throws IOException;
 
     protected void copyResources(String srcPath, Path dstPath) {
         try {

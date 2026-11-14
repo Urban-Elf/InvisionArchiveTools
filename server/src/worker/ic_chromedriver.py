@@ -15,6 +15,8 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see https://www.gnu.org/licenses/.
 
+import threading
+import time
 import undetected_chromedriver
 
 from ..shared_constants import ButtonCallbackSA
@@ -33,13 +35,19 @@ class IC_ChromeDriver(undetected_chromedriver.Chrome):
                                                 button_configs=[
                                                     ButtonConfig("Retry"),
                                                     ButtonConfig("Close", shared_action=ButtonCallbackSA.TERMINATE)])
-        while True:
+        self.connecting_state = ICWorkerState(note="Reconnecting...", progressive=True)
+        self.shutdown_event = threading.Event()
+        
+        while not self.shutdown_event.is_set():
             try: 
                 super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
                 self.initialized = True
                 break
             except URLError:
                 ic_worker.set_state(self.network_err_state)
+                # set_state is blocking
+                ic_worker.set_state(self.connecting_state)
+                time.sleep(1)
         self.ic_worker = ic_worker
 
     def is_initialized(self):
@@ -67,4 +75,9 @@ class IC_ChromeDriver(undetected_chromedriver.Chrome):
                     self.network_err_state.hint = net_error
                 self.ic_worker.set_state(self.network_err_state)
                 # "Retry" clicked
-                self.ic_worker.set_state(SharedState.ATTEMPTING_RECONNECT)
+                self.ic_worker.set_state(self.connecting_state)
+                time.sleep(1)
+
+    def quit(self):
+        self.shutdown_event.set()
+        super().quit()

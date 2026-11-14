@@ -22,7 +22,27 @@ package com.urbanelf.iat.util;
 import java.awt.Component;
 import java.awt.Dimension;
 
+import javax.swing.SwingUtilities;
+
+import javafx.application.Platform;
+
 public class UIUtils {
+    public static void executeOnSwingThread(Runnable runnable) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            runnable.run();
+        } else {
+            SwingUtilities.invokeLater(runnable);
+        }
+    }
+
+    public static void executeOnJavaFXThread(Runnable runnable) {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+        } else {
+            Platform.runLater(runnable);
+        }
+    }
+
     public static void prefWidth(Component component, int width) {
         final Dimension dimension = component.getPreferredSize();
         dimension.width = width;
