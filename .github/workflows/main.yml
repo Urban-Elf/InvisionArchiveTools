@@ -31,6 +31,16 @@ jobs:
       with:
         python-version: '3.12'
 
+    - name: Diagnose cryptography and OpenSSL
+      if: runner.os == 'macOS'
+      working-directory: server
+      run: |
+        .venv/bin/python -m pip install -v --force-reinstall --no-cache-dir cryptography==50.0.2
+        otool -L .venv/lib/python3.12/site-packages/cryptography/hazmat/bindings/_rust.abi3.so
+        otool -L dist/server/_internal/libssl.3.dylib
+        nm -gU dist/server/_internal/libssl.3.dylib | grep SSL_get0_group_name || true
+
+
     - name: Build Python server
       working-directory: server
       run: |
