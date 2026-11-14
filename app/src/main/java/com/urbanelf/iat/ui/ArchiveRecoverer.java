@@ -68,7 +68,7 @@ public class ArchiveRecoverer {
                     final List<Path> paths;
                     try (Stream<Path> walk = Files.walk(path)) {
                         paths = walk
-                                .filter(Files::isDirectory)
+                                .filter(p -> Files.isDirectory(p) && p != FileTree.getExportPath())
                                 .sorted(Comparator.reverseOrder())
                                 .toList();
                     }
