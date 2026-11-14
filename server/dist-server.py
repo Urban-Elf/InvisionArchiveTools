@@ -43,8 +43,6 @@ def build():
         "--collect-all", "bs4",
         "--hidden-import", "certifi",
         "--collect-all", "certifi",
-        "--hidden-import", "tkinter",
-        "--hidden-import", "tkinter.simpledialog",
         "--log-level", "WARN",
         #"--debug", "imports",
         "--noconfirm"
